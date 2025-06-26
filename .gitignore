@@ -1,0 +1,9 @@
+# binary and obj folders. (C#)
+bin/
+obj/
+
+# enviroment files
+*.env
+
+# Exclude the playGround its just for quick testing
+/Applications/PlayGround/
