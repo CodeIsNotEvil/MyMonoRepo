@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec: # Pod spec
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:stable
+        ports:
+        - containerPort: 80
+        resources:
+          requests: # Resources available at startup
+            memory: "16Mi"
+            cpu: "50m" # 50milliCPUs (1/20 CPU Core)
+          limits: # Setting limits prevents a faulty pod to consume all cluster resources
+            memory: "1Gi"
+            cpu: "2" # 2 CPU Cores

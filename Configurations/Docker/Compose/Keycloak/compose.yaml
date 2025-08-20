@@ -1,0 +1,42 @@
+services:
+  postgresql:
+    image: bitnami/postgresql:latest
+    container_name: postgresql
+    restart: unless-stopped
+    environment:
+      - POSTGRESQL_USERNAME=keycloak
+      - POSTGRESQL_PASSWORD=keycloak_password
+      - POSTGRESQL_DATABASE=keycloak
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - Keycloak_PostgreSQL:/bitnami/postgresql
+    networks:
+      - keycloak-network
+
+  keycloak:
+    image: bitnami/keycloak:latest
+    environment:
+      - KEYCLOAK_DATABASE_TYPE=postgresql
+      - KEYCLOAK_DATABASE_HOST=postgresql
+      - KEYCLOAK_DATABASE_PORT=5432
+      - KEYCLOAK_DATABASE_USER=keycloak
+      - KEYCLOAK_DATABASE_PASSWORD=keycloak_password
+      - KEYCLOAK_DATABASE_NAME=keycloak
+      - KEYCLOAK_ADMIN_USER=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - '8080:8080'
+    networks:
+      - keycloak-network
+
+volumes:
+  Keycloak_PostgreSQL:
+    driver: local
+
+networks:
+  keycloak-network:
+    driver: bridge
