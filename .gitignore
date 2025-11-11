@@ -7,3 +7,4 @@ obj/
 
 # Exclude the playGround its just for quick testing
 /Applications/PlayGround/
+.vscode
