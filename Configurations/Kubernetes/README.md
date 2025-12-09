@@ -2,7 +2,7 @@
 
 Cluster management and orchastration Tool
 
-### Configuration
+## Configuration
 
 configuration file lives at `~/.kube/config`
 
@@ -41,29 +41,39 @@ Alias `Kubectl` to `k` (nushell: `alias k = kubectl`)
 ### Common command usage
 
 - #### Cluster
-    - `k cluster-info` basic cluster Information (Contorl plane address & DNS endpoint)
+
+- `k cluster-info` basic cluster Information (Contorl plane address & DNS endpoint)
+
 - #### Node
-    - `k get nodes` list of Nodes(maschines) in the Cluster
-    - `k describe node minikube` list everying about the **node** minikube
+
+- `k get nodes` list of Nodes(maschines) in the Cluster
+- `k describe node minikube` list everying about the **node** minikube
+
 - #### namespace
-    - `k get namespace` shows the namespaces, default is used if non are defined by the administrator
-    - `k create namespace dev` creates a new namespace with the name of dev
-    - `k create -f namespace-prod.yaml` create everythig specified inside the yaml file `namespace-prod.yaml` 
-    - `k delete namespace prod` deletes the namespace named prod
-    - `k describe namespace prod` list everyting about the **namespace** prod
-    - `k config set-context --current --namespace=dev` Switching the context to the dev namepace
+
+- `k get namespace` shows the namespaces, default is used if non are defined by the administrator
+- `k create namespace dev` creates a new namespace with the name of dev
+- `k create -f namespace-prod.yaml` create everythig specified inside the yaml file `namespace-prod.yaml`
+- `k delete namespace prod` deletes the namespace named prod
+- `k describe namespace prod` list everyting about the **namespace** prod
+- `k config set-context --current --namespace=dev` Switching the context to the dev namepace
+
 - #### pods
-    - `k get pods` show pods in the default namespaces
-    - `k get pods -n dev` only shows the pods inside the dev namespace
-    - `k get pods --all-namespaces` shows all pods in all namespaces
+
+- `k get pods` show pods in the default namespaces
+- `k get pods -n dev` only shows the pods inside the dev namespace
+- `k get pods --all-namespaces` shows all pods in all namespaces
+
 - #### deployments
-    - `k create deployment hello-node --image=k8s.gcr.io/echoserver:1.4` create the hellow world depolyment inside the **default** namespace
-    - `k create deployment hello-node --image=k8s.gcr.io/echoserver:1.4 -n dev` create the hellow world depolyment inside the **dev** namespace
+
+- `k create deployment hello-node --image=k8s.gcr.io/echoserver:1.4` create the hellow world depolyment inside the **default** namespace
+- `k create deployment hello-node --image=k8s.gcr.io/echoserver:1.4 -n dev` create the hellow world depolyment inside the **dev** namespace
 
 - #### events
-    - `k get events` shows the evntes in the default namespace
-    - `k get events -n dev` shows the events in the dev namespace
-    - `k get events --all-namespaces` shows events in all namespaces
+
+- `k get events` shows the evntes in the default namespace
+- `k get events -n dev` shows the events in the dev namespace
+- `k get events --all-namespaces` shows events in all namespaces
 
 ## Minikube
 
@@ -73,7 +83,7 @@ Minikube is a single maschine cluster. With the features of Kubernetes.
 
 Made for testing, development and learning.
 
-### Installation 
+### Minikube Installation
 
 Check the guide in the official [docs](https://minikube.sigs.k8s.io/docs/start/?arch=%2Flinux%2Fx86-64%2Fstable%2Fdebian+package)
 
@@ -91,7 +101,7 @@ rm minikube_latest_amd64.deb
 
 Repository based Packagemanager for Kubernetes.
 
-### Installation
+### Helm Installation
 
 Check the guide in the official [docs](https://helm.sh/docs/intro/install/)
 
