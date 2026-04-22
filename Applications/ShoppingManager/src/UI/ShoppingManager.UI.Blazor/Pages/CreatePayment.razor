@@ -1,0 +1,117 @@
+@page "/create-payment"
+@using ShoppingManager.Domain.Model
+@using ShoppingManager.UI.Blazor.Services
+@inject NavigationManager NavigationManager
+@inject IPaymentApiClient PaymentApiClient
+
+<PageTitle>Create Payment</PageTitle>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1>Create New Payment</h1>
+            
+            <EditForm Model="@paymentModel" OnValidSubmit="@HandleCreatePayment">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="userId" class="form-label">User ID</label>
+                    <InputText id="userId" class="form-control" @bind-Value="paymentModel.UserIdString" placeholder="Enter user ID (GUID)" />
+                    <ValidationMessage For="@(() => paymentModel.UserIdString)" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="amount" class="form-label">Amount</label>
+                    <InputNumber id="amount" class="form-control" @bind-Value="paymentModel.Amount" placeholder="Enter amount" />
+                    <ValidationMessage For="@(() => paymentModel.Amount)" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="date" class="form-label">Date</label>
+                    <InputDate id="date" class="form-control" @bind-Value="paymentModel.Date" />
+                    <ValidationMessage For="@(() => paymentModel.Date)" />
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Create Payment</button>
+                    <button type="button" class="btn btn-secondary ms-2" @onclick="GoBack">Cancel</button>
+                </div>
+            </EditForm>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3" role="alert">
+                    @successMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3" role="alert">
+                    @errorMessage
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private PaymentModel paymentModel = new();
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    private class PaymentModel
+    {
+        public string UserIdString { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public DateTime Date { get; set; } = DateTime.UtcNow;
+    }
+
+    private async Task HandleCreatePayment()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+
+            // Validate GUID
+            if (!Guid.TryParse(paymentModel.UserIdString, out var userId))
+            {
+                errorMessage = "Invalid User ID format. Please enter a valid GUID.";
+                return;
+            }
+
+            if (paymentModel.Amount <= 0)
+            {
+                errorMessage = "Amount must be greater than zero.";
+                return;
+            }
+
+            // Call the API to create the payment
+            var request = new CreatePaymentRequest
+            {
+                Amount = paymentModel.Amount,
+                UserId = userId,
+                Date = paymentModel.Date
+            };
+
+            var payment = await PaymentApiClient.CreatePaymentAsync(request);
+
+            successMessage = $"Payment created successfully! Payment ID: {payment.Id}";
+            paymentModel = new PaymentModel { Date = DateTime.UtcNow };
+
+            // Optionally redirect after a delay
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

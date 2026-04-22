@@ -1,0 +1,172 @@
+@page "/users/new"
+@page "/users/{UserId:guid}"
+@using ShoppingManager.UI.Blazor.Services
+@inject NavigationManager NavigationManager
+@inject IUserApiClient UserApiClient
+
+<PageTitle>@(IsNew ? "Create User" : "Edit User")</PageTitle>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1>@(IsNew ? "Create New User" : "Edit User")</h1>
+
+            @if (isLoading)
+            {
+                <div class="alert alert-info">Loading...</div>
+            }
+            else
+            {
+                <EditForm Model="@userModel" OnValidSubmit="@HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <InputText id="name" class="form-control" @bind-Value="userModel.Name" placeholder="Enter user name" />
+                        <ValidationMessage For="@(() => userModel.Name)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <InputText id="email" class="form-control" @bind-Value="userModel.Email" placeholder="Enter email address" />
+                        <ValidationMessage For="@(() => userModel.Email)" />
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">@(IsNew ? "Create User" : "Update User")</button>
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="GoBack">Cancel</button>
+                    </div>
+                </EditForm>
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success mt-3" role="alert">
+                        @successMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger mt-3" role="alert">
+                        @errorMessage
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid? UserId { get; set; }
+
+    private UserModel userModel = new();
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isLoading = true;
+
+    private bool IsNew => !UserId.HasValue || UserId == Guid.Empty;
+
+    private class UserModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!IsNew)
+        {
+            await LoadUser();
+        }
+        else
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadUser()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            var user = await UserApiClient.GetUserAsync(UserId!.Value);
+            userModel.Name = user.Name;
+            userModel.Email = user.Email;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading user: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            // Validate inputs
+            if (string.IsNullOrWhiteSpace(userModel.Name))
+            {
+                errorMessage = "Name is required.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(userModel.Email))
+            {
+                errorMessage = "Email is required.";
+                return;
+            }
+
+            // Simple email validation
+            if (!userModel.Email.Contains("@"))
+            {
+                errorMessage = "Invalid email address.";
+                return;
+            }
+
+            if (IsNew)
+            {
+                var request = new CreateUserRequest
+                {
+                    Name = userModel.Name,
+                    Email = userModel.Email
+                };
+
+                var user = await UserApiClient.CreateUserAsync(request);
+                successMessage = $"User '{user.Name}' created successfully!";
+            }
+            else
+            {
+                var request = new UpdateUserRequest
+                {
+                    Name = userModel.Name,
+                    Email = userModel.Email
+                };
+
+                var user = await UserApiClient.UpdateUserAsync(UserId!.Value, request);
+                successMessage = $"User '{user.Name}' updated successfully!";
+            }
+
+            // Redirect to users list after a delay
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo("/users");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/users");
+    }
+}
