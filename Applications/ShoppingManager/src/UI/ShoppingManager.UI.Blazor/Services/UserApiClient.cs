@@ -43,28 +43,28 @@ public class UserApiClient : IUserApiClient
     {
         HttpResponseMessage? response = await _httpClient.PostAsJsonAsync("api/users", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<UserResponse>();
+        return await response.Content.ReadFromJsonAsync<UserResponse>() ?? throw new Exception("Failed to deserialize user response");
     }
 
     public async Task<UserResponse> GetUserAsync(Guid id)
     {
         HttpResponseMessage? response = await _httpClient.GetAsync($"api/users/{id}");
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<UserResponse>();
+        return await response.Content.ReadFromJsonAsync<UserResponse>() ?? throw new Exception("Failed to deserialize user response");
     }
 
     public async Task<IEnumerable<UserResponse>> GetAllUsersAsync()
     {
         HttpResponseMessage? response = await _httpClient.GetAsync("api/users");
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<IEnumerable<UserResponse>>();
+        return await response.Content.ReadFromJsonAsync<IEnumerable<UserResponse>>() ?? throw new Exception("Failed to deserialize user response");
     }
 
     public async Task<UserResponse> UpdateUserAsync(Guid id, UpdateUserRequest request)
     {
         HttpResponseMessage? response = await _httpClient.PutAsJsonAsync($"api/users/{id}", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<UserResponse>();
+        return await response.Content.ReadFromJsonAsync<UserResponse>() ?? throw new Exception("Failed to deserialize user response");
     }
 
     public async Task DeleteUserAsync(Guid id)

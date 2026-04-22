@@ -42,21 +42,21 @@ public class PaymentGroupApiClient : IPaymentGroupApiClient
     {
         HttpResponseMessage? response = await _httpClient.PostAsJsonAsync("api/paymentgroups", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<PaymentGroupResponse>();
+        return await response.Content.ReadFromJsonAsync<PaymentGroupResponse>() ?? throw new Exception("Failed to deserialize user response");
     }
 
     public async Task<PaymentGroupResponse> GetPaymentGroupAsync(Guid id)
     {
         HttpResponseMessage? response = await _httpClient.GetAsync($"api/paymentgroups/{id}");
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<PaymentGroupResponse>();
+        return await response.Content.ReadFromJsonAsync<PaymentGroupResponse>() ?? throw new Exception("Failed to deserialize user response");
     }
 
     public async Task<IEnumerable<PaymentGroupResponse>> GetAllPaymentGroupsAsync()
     {
         HttpResponseMessage? response = await _httpClient.GetAsync("api/paymentgroups");
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<IEnumerable<PaymentGroupResponse>>();
+        return await response.Content.ReadFromJsonAsync<IEnumerable<PaymentGroupResponse>>() ?? throw new Exception("Failed to deserialize user response");
     }
 
     public async Task AddUserToGroupAsync(Guid paymentGroupId, AddUserToGroupRequest request)
