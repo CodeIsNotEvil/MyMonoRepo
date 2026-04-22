@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Application\ShoppingManager.Application.csproj" />
+    <ProjectReference Include="..\Infrastructure\ShoppingManager.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

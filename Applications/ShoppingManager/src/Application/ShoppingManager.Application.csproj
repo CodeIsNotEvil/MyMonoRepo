@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Domain\ShoppingManager.Domain.csproj" />
+    <ProjectReference Include="..\Infrastructure\ShoppingManager.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

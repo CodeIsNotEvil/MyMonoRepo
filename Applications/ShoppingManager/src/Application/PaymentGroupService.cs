@@ -1,4 +1,5 @@
 using ShoppingManager.Domain.Model;
+using ShoppingManager.Infrastructure.Abstractions;
 
 namespace ShoppingManager.Application;
 
@@ -13,37 +14,66 @@ public interface IPaymentGroupService
 
 public class PaymentGroupService : IPaymentGroupService
 {
-    public Task<PaymentGroup> CreatePaymentGroupAsync(string name)
+    private readonly IUnitOfWork _unitOfWork;
+
+    public PaymentGroupService(IUnitOfWork unitOfWork)
+    {
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<PaymentGroup> CreatePaymentGroupAsync(string name)
     {
         var paymentGroup = new PaymentGroup
         {
             Name = name
         };
 
-        return Task.FromResult(paymentGroup);
+        await _unitOfWork.PaymentGroups.AddAsync(paymentGroup);
+        await _unitOfWork.SaveChangesAsync();
+
+        return paymentGroup;
     }
 
-    public Task<PaymentGroup> GetPaymentGroupAsync(Guid paymentGroupId)
+    public async Task<PaymentGroup> GetPaymentGroupAsync(Guid paymentGroupId)
     {
-        // This will be implemented with repository pattern
-        throw new NotImplementedException();
+        var paymentGroup = await _unitOfWork.PaymentGroups.GetByIdAsync(paymentGroupId);
+        if (paymentGroup is null)
+        {
+            throw new KeyNotFoundException($"PaymentGroup with ID {paymentGroupId} not found.");
+        }
+        return paymentGroup;
     }
 
-    public Task<IEnumerable<PaymentGroup>> GetAllPaymentGroupsAsync()
+    public async Task<IEnumerable<PaymentGroup>> GetAllPaymentGroupsAsync()
     {
-        // This will be implemented with repository pattern
-        throw new NotImplementedException();
+        return await _unitOfWork.PaymentGroups.GetAllAsync();
     }
 
-    public Task AddUserToGroupAsync(Guid paymentGroupId, Guid userId)
+    public async Task AddUserToGroupAsync(Guid paymentGroupId, Guid userId)
     {
-        // This will be implemented with repository pattern
-        throw new NotImplementedException();
+        var paymentGroup = await _unitOfWork.PaymentGroups.GetByIdAsync(paymentGroupId);
+        if (paymentGroup is null)
+        {
+            throw new KeyNotFoundException($"PaymentGroup with ID {paymentGroupId} not found.");
+        }
+
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user is null)
+        {
+            throw new KeyNotFoundException($"User with ID {userId} not found.");
+        }
+
+        if (!paymentGroup.Users.Contains(user))
+        {
+            paymentGroup.Users.Add(user);
+            await _unitOfWork.PaymentGroups.UpdateAsync(paymentGroup);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 
-    public Task DeletePaymentGroupAsync(Guid paymentGroupId)
+    public async Task DeletePaymentGroupAsync(Guid paymentGroupId)
     {
-        // This will be implemented with repository pattern
-        throw new NotImplementedException();
+        await _unitOfWork.PaymentGroups.DeleteAsync(paymentGroupId);
+        await _unitOfWork.SaveChangesAsync();
     }
 }

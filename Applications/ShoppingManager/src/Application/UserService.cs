@@ -1,4 +1,5 @@
 using ShoppingManager.Domain.Model;
+using ShoppingManager.Infrastructure.Abstractions;
 
 namespace ShoppingManager.Application;
 
@@ -13,7 +14,14 @@ public interface IUserService
 
 public class UserService : IUserService
 {
-    public Task<User> CreateUserAsync(string name, string email)
+    private readonly IUnitOfWork _unitOfWork;
+
+    public UserService(IUnitOfWork unitOfWork)
+    {
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<User> CreateUserAsync(string name, string email)
     {
         var user = new User
         {
@@ -21,36 +29,47 @@ public class UserService : IUserService
             Email = email
         };
 
-        return Task.FromResult(user);
+        await _unitOfWork.Users.AddAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        return user;
     }
 
-    public Task<User> GetUserAsync(Guid userId)
+    public async Task<User> GetUserAsync(Guid userId)
     {
-        // This will be implemented with repository pattern
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<User>> GetAllUsersAsync()
-    {
-        // This will be implemented with repository pattern
-        throw new NotImplementedException();
-    }
-
-    public Task<User> UpdateUserAsync(Guid userId, string name, string email)
-    {
-        var user = new User
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user is null)
         {
-            Id = userId,
-            Name = name,
-            Email = email
-        };
-
-        return Task.FromResult(user);
+            throw new KeyNotFoundException($"User with ID {userId} not found.");
+        }
+        return user;
     }
 
-    public Task DeleteUserAsync(Guid userId)
+    public async Task<IEnumerable<User>> GetAllUsersAsync()
     {
-        // This will be implemented with repository pattern
-        throw new NotImplementedException();
+        return await _unitOfWork.Users.GetAllAsync();
+    }
+
+    public async Task<User> UpdateUserAsync(Guid userId, string name, string email)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user is null)
+        {
+            throw new KeyNotFoundException($"User with ID {userId} not found.");
+        }
+
+        user.Name = name;
+        user.Email = email;
+
+        await _unitOfWork.Users.UpdateAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        return user;
+    }
+
+    public async Task DeleteUserAsync(Guid userId)
+    {
+        await _unitOfWork.Users.DeleteAsync(userId);
+        await _unitOfWork.SaveChangesAsync();
     }
 }

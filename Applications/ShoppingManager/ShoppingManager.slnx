@@ -12,6 +12,9 @@
   <Folder Name="/src/Infrastructure/">
     <Project Path="src/Infrastructure/ShoppingManager.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/MigrationRunner/">
+    <Project Path="src/MigrationRunner/ShoppingManager.MigrationRunner.csproj" />
+  </Folder>
   <Folder Name="/src/UI/">
     <Project Path="src/UI/ShoppingManager.UI.Blazor/ShoppingManager.UI.Blazor.csproj" />
   </Folder>
