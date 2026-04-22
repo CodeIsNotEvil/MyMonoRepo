@@ -3,6 +3,7 @@
 @using ShoppingManager.UI.Blazor.Services
 @inject NavigationManager NavigationManager
 @inject IPaymentApiClient PaymentApiClient
+@inject IUserApiClient UserApiClient
 
 <PageTitle>Create Payment</PageTitle>
 
@@ -16,8 +17,14 @@
                 <ValidationSummary />
 
                 <div class="mb-3">
-                    <label for="userId" class="form-label">User ID</label>
-                    <InputText id="userId" class="form-control" @bind-Value="paymentModel.UserIdString" placeholder="Enter user ID (GUID)" />
+                    <label for="userId" class="form-label">User</label>
+                    <InputSelect id="userId" class="form-control" @bind-Value="paymentModel.UserIdString">
+                        <option value="">-- Select a user --</option>
+                        @foreach (var user in users)
+                        {
+                            <option value="@user.Id">@user.Name</option>
+                        }
+                    </InputSelect>
                     <ValidationMessage For="@(() => paymentModel.UserIdString)" />
                 </div>
 
@@ -60,6 +67,20 @@
     private PaymentModel paymentModel = new();
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
+    private List<UserResponse> users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var userList = await UserApiClient.GetAllUsersAsync();
+            users = userList.ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load users: {ex.Message}";
+        }
+    }
 
     private class PaymentModel
     {
@@ -74,10 +95,17 @@
         {
             errorMessage = string.Empty;
 
+            // Validate that a user was selected
+            if (string.IsNullOrWhiteSpace(paymentModel.UserIdString))
+            {
+                errorMessage = "Please select a user.";
+                return;
+            }
+
             // Validate GUID
             if (!Guid.TryParse(paymentModel.UserIdString, out var userId))
             {
-                errorMessage = "Invalid User ID format. Please enter a valid GUID.";
+                errorMessage = "Invalid User ID format.";
                 return;
             }
 
