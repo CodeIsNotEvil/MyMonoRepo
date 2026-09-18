@@ -127,6 +127,14 @@ public sealed class SyncEngine : IAsyncDisposable
         return SyncOutcome.Offline;
       }
 
+      // Checked before anything is sent: pushing this device's queued changes at a database that no
+      // longer holds its household would only get them rejected and dropped from the outbox.
+      if (await HoldsSeveralHouseholdsAsync())
+      {
+        Status = SyncStatus.ServerReset;
+        return new SyncOutcome(SyncStatus.ServerReset, 0, []);
+      }
+
       Status = SyncStatus.Syncing;
       Changed?.Invoke();
 
@@ -161,8 +169,18 @@ public sealed class SyncEngine : IAsyncDisposable
 
       LastSyncUtc = response.ServerTimeUtc;
       LastConflicts = response.Conflicts;
-      Status = SyncStatus.Idle;
       await RefreshPendingCountAsync();
+
+      // The other way a wiped server shows itself: it seeded a fresh household, which has just arrived
+      // next to the one this device already had. There is meant to be exactly one.
+      if (await HoldsSeveralHouseholdsAsync())
+      {
+        _logger.LogWarning("This device now holds two households; the server's database was replaced.");
+        Status = SyncStatus.ServerReset;
+        return new SyncOutcome(SyncStatus.ServerReset, response.Payload.Count, response.Conflicts);
+      }
+
+      Status = SyncStatus.Idle;
 
       if (response.Conflicts.Count > 0)
       {
@@ -191,6 +209,9 @@ public sealed class SyncEngine : IAsyncDisposable
       Changed?.Invoke();
     }
   }
+
+  private async Task<bool> HoldsSeveralHouseholdsAsync() =>
+    (await _store.GetHouseholdsAsync()).Count(h => !h.IsDeleted) > 1;
 
   public async Task RefreshPendingCountAsync()
   {
