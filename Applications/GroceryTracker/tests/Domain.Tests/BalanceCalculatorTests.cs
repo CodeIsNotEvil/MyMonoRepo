@@ -226,4 +226,79 @@ public class BalanceCalculatorTests
       first.Transfers.Select(t => (t.FromName, t.ToName, t.Amount)),
       second.Transfers.Select(t => (t.FromName, t.ToName, t.Amount)));
   }
+
+  private static Member Weighted(Member member, decimal weight)
+  {
+    member.ShareWeight = weight;
+    return member;
+  }
+
+  [Fact]
+  public void Shares_follow_the_weights_instead_of_splitting_evenly()
+  {
+    var anna = Weighted(Person("Anna"), 2m);
+    var ben = Weighted(Person("Ben"), 1m);
+
+    // Anna carries two thirds of 90 = 60 and paid 30, so she owes 30; Ben carries 30 and paid 60.
+    var summary = BalanceCalculator.Calculate([Trip(30m, anna), Trip(60m, ben)], [anna, ben], []);
+
+    Assert.Equal(60m, Of(summary, anna).FairShare);
+    Assert.Equal(66.67m, Of(summary, anna).SharePercent);
+    Assert.Equal(-30m, Of(summary, anna).Balance);
+    Assert.Equal(30m, Of(summary, ben).Balance);
+
+    var transfer = Assert.Single(summary.Transfers);
+    Assert.Equal(("Anna", "Ben", 30m), (transfer.FromName, transfer.ToName, transfer.Amount));
+  }
+
+  [Fact]
+  public void Weights_only_matter_relative_to_each_other()
+  {
+    var anna = Weighted(Person("Anna"), 60m);
+    var ben = Weighted(Person("Ben"), 40m);
+
+    var summary = BalanceCalculator.Calculate([Trip(100m, anna)], [anna, ben], []);
+
+    Assert.Equal(60m, Of(summary, anna).FairShare);
+    Assert.Equal(40m, Of(summary, ben).FairShare);
+    Assert.Equal(-40m, Of(summary, ben).Balance);
+  }
+
+  [Fact]
+  public void A_zero_weight_carries_nothing()
+  {
+    var anna = Person("Anna");
+    var ben = Weighted(Person("Ben"), 0m);
+
+    var summary = BalanceCalculator.Calculate([Trip(50m, anna)], [anna, ben], []);
+
+    Assert.Equal(0m, Of(summary, ben).FairShare);
+    Assert.True(summary.IsSettled);
+  }
+
+  [Fact]
+  public void All_zero_weights_fall_back_to_an_even_split()
+  {
+    var anna = Weighted(Person("Anna"), 0m);
+    var ben = Weighted(Person("Ben"), 0m);
+
+    var summary = BalanceCalculator.Calculate([Trip(100m, anna)], [anna, ben], []);
+
+    Assert.Equal(50m, Of(summary, anna).FairShare);
+    Assert.Equal(-50m, Of(summary, ben).Balance);
+  }
+
+  [Fact]
+  public void Settling_a_weighted_split_brings_everyone_to_zero()
+  {
+    var anna = Weighted(Person("Anna"), 3m);
+    var ben = Weighted(Person("Ben"), 1m);
+
+    var summary = BalanceCalculator.Calculate(
+      [Trip(100m, anna)], [anna, ben], [Transfer(ben, anna, 25m)]);
+
+    Assert.True(summary.IsSettled);
+    Assert.Equal(0m, Of(summary, anna).Balance);
+    Assert.Equal(0m, Of(summary, ben).Balance);
+  }
 }

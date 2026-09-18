@@ -18,21 +18,11 @@ public interface IHouseholdProvisioner
 /// </remarks>
 public sealed class HouseholdProvisioner : IHouseholdProvisioner
 {
-  /// <summary>
-  /// Eight starter categories carrying a categorical palette validated for colour-vision
-  /// deficiency, assigned in slot order. Eight is the cap: a ninth hue would have to be cycled,
-  /// which is exactly what makes two series indistinguishable.
-  /// </summary>
-  private static readonly (string Name, string Color)[] DefaultCategories =
+  /// <summary>The two categories a new household starts with. More can be added under Manage.</summary>
+  public static readonly (string Name, string Color)[] DefaultCategories =
   [
-    ("Produce", "#2a78d6"),
-    ("Dairy & Eggs", "#eb6834"),
-    ("Meat & Fish", "#1baf7a"),
-    ("Bakery", "#eda100"),
-    ("Drinks", "#e87ba4"),
-    ("Frozen", "#008300"),
-    ("Pantry", "#4a3aa7"),
-    ("Household & Care", "#e34948"),
+    ("Groceries", "#2a78d6"),
+    ("Household", "#eb6834"),
   ];
 
   private readonly GroceryTrackerDbContext _db;

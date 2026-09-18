@@ -13,7 +13,7 @@
         Import a CSV export of your spending sheet. Only <strong>dates</strong> and <strong>amounts</strong>
         are read: every filled amount cell becomes one trip. You then say <strong>which person each
         amount column belongs to</strong>, so the balance between people is right. Bookings are saved
-        without a category at a store called <em>Imported</em>.
+        under the category you pick, at a store called <em>Imported</em>.
     </p>
 
     <label for="csv">CSV file</label>
@@ -85,6 +85,19 @@ else if (_parsed is not null && _plan is not null)
                 }
             </div>
         }
+    </section>
+
+    <section class="card">
+        <div class="field mb-0">
+            <label for="category">Category for the new bookings</label>
+            <select id="category" value="@(_categoryId?.ToString() ?? string.Empty)" @onchange="OnCategoryChangedAsync">
+                <option value="">No category</option>
+                @foreach (var category in _categories)
+                {
+                    <option value="@category.Id">@category.Name</option>
+                }
+            </select>
+        </div>
     </section>
 
     <div class="tiles">
@@ -212,6 +225,8 @@ else if (_noHousehold)
   private ImportPlan? _plan;
   private List<ColumnChoice> _choices = [];
   private List<Member> _members = [];
+  private List<Category> _categories = [];
+  private Guid? _categoryId;
   private string _fileName = string.Empty;
   private string? _error;
   private bool _busy;
@@ -299,6 +314,9 @@ else if (_noHousehold)
       }
 
       _members = await Data.GetMembersAsync();
+      _categories = await Data.GetCategoriesAsync();
+      _categoryId = _categories
+        .FirstOrDefault(c => string.Equals(c.Name, "Groceries", StringComparison.CurrentCultureIgnoreCase))?.Id;
       _choices = parsed.Columns.Select(DefaultChoice).ToList();
       _parsed = parsed;
 
@@ -360,6 +378,12 @@ else if (_noHousehold)
     await RebuildPlanAsync();
   }
 
+  private async Task OnCategoryChangedAsync(ChangeEventArgs e)
+  {
+    _categoryId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+    await RebuildPlanAsync();
+  }
+
   private async Task OnNameChangedAsync(ColumnChoice choice, ChangeEventArgs e)
   {
     choice.NewName = e.Value?.ToString() ?? string.Empty;
@@ -373,7 +397,7 @@ else if (_noHousehold)
       return;
     }
 
-    _plan = await Data.PlanImportAsync(_parsed.Bookings, _choices.Select(ToAssignment).ToList());
+    _plan = await Data.PlanImportAsync(_parsed.Bookings, _choices.Select(ToAssignment).ToList(), _categoryId);
   }
 
   private static ColumnAssignment ToAssignment(ColumnChoice choice)

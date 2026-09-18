@@ -442,4 +442,35 @@ public class SyncServiceTests
     Assert.Empty(response.Conflicts);
     Assert.Equal(member.Id, Assert.Single(response.Payload.Trips).PaidByMemberId);
   }
+
+  [Fact]
+  public async Task A_members_share_weight_is_persisted_and_negative_ones_are_rejected()
+  {
+    await using var ctx = await SyncTestContext.CreateAsync();
+    var household = await ctx.SeedHouseholdAsync();
+    var cursor = (await ctx.SyncAsync(0)).Cursor;
+
+    var anna = new Member { DisplayName = "Anna", HouseholdId = household.Id, ShareWeight = 2m };
+    var ben = new Member { DisplayName = "Ben", HouseholdId = household.Id, ShareWeight = -1m };
+
+    var response = await ctx.SyncAsync(
+      cursor,
+      ctx.Upsert(anna, SyncEntityType.Member),
+      ctx.Upsert(ben, SyncEntityType.Member));
+
+    Assert.Single(response.Conflicts);
+    var echoed = Assert.Single(response.Payload.Members);
+    Assert.Equal(2m, echoed.ShareWeight);
+  }
+
+  [Fact]
+  public async Task A_new_household_starts_with_only_groceries_and_household_categories()
+  {
+    await using var ctx = await SyncTestContext.CreateAsync();
+    await ctx.SeedHouseholdAsync();
+
+    var pulled = await ctx.SyncAsync(0);
+
+    Assert.Equal(["Groceries", "Household"], pulled.Payload.Categories.Select(c => c.Name).Order());
+  }
 }

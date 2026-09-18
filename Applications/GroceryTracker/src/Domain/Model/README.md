@@ -16,6 +16,7 @@ erDiagram
     MEMBER {
         Guid Id PK
         string DisplayName
+        decimal ShareWeight
         Guid HouseholdId FK
         long SyncStamp
         bool IsDeleted

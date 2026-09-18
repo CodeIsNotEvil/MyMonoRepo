@@ -23,6 +23,7 @@ public sealed record PayerUpdate(Guid TripId, Guid MemberId);
 /// Bookings that are already here but were imported without a payer (or with a different one), so
 /// re-importing with people assigned fixes them instead of duplicating them.
 /// </param>
+/// <param name="NewItems">One line per new trip putting its whole amount into the chosen category.</param>
 /// <param name="NewMembers">People to create, or bring back if they were removed.</param>
 /// <param name="AlreadyImported">
 /// Bookings that are here and need no change. This includes trips the user deleted afterwards, so a
@@ -32,6 +33,7 @@ public sealed record ImportPlan(
   Household Household,
   Guid StoreId,
   IReadOnlyList<ShoppingTrip> NewTrips,
+  IReadOnlyList<ExpenseItem> NewItems,
   IReadOnlyList<PayerUpdate> PayerUpdates,
   IReadOnlyList<Member> NewMembers,
   int AlreadyImported)
@@ -295,7 +297,8 @@ public sealed class GroceryDataService
   /// <returns>Null until this device has synced a household to attach the trips to.</returns>
   public async Task<ImportPlan?> PlanImportAsync(
     IReadOnlyList<ImportedBooking> bookings,
-    IReadOnlyList<ColumnAssignment> assignments)
+    IReadOnlyList<ColumnAssignment> assignments,
+    Guid? categoryId = null)
   {
     var household = await GetHouseholdAsync();
     if (household is null)
@@ -320,6 +323,7 @@ public sealed class GroceryDataService
     var localTrips = (await _store.GetTripsAsync()).ToDictionary(t => t.Id);
 
     var fresh = new List<ShoppingTrip>();
+    var freshItems = new List<ExpenseItem>();
     var updates = new List<PayerUpdate>();
     var unchanged = 0;
 
@@ -339,6 +343,18 @@ public sealed class GroceryDataService
           HouseholdId = household.Id,
           PaidByMemberId = payer,
         });
+
+        if (categoryId is { } category)
+        {
+          freshItems.Add(new ExpenseItem
+          {
+            Id = DeterministicGuid.Create(household.Id, $"csv-item|{id}"),
+            TripId = id,
+            CategoryId = category,
+            Amount = booking.Amount,
+            HouseholdId = household.Id,
+          });
+        }
       }
       else if (!existing.IsDeleted && payer is { } assigned && existing.PaidByMemberId != assigned)
       {
@@ -350,7 +366,7 @@ public sealed class GroceryDataService
       }
     }
 
-    return new ImportPlan(household, storeId, fresh, updates, [.. newMembers.Values], unchanged);
+    return new ImportPlan(household, storeId, fresh, freshItems, updates, [.. newMembers.Values], unchanged);
   }
 
   /// <summary>
@@ -426,6 +442,11 @@ public sealed class GroceryDataService
       foreach (var trip in plan.NewTrips)
       {
         await UpsertAsync(Trips, trip, SyncEntityType.ShoppingTrip);
+      }
+
+      foreach (var item in plan.NewItems)
+      {
+        await UpsertAsync(Items, item, SyncEntityType.ExpenseItem);
       }
     }
 

@@ -20,6 +20,11 @@ public class EntityMemberConfiguration : IEntityTypeConfiguration<Member>
       .HasMaxLength(120)
       .IsRequired();
 
+    builder.Property(m => m.ShareWeight)
+      .HasPrecision(9, 4)
+      .HasDefaultValue(1m)
+      .IsRequired();
+
     builder.Property(m => m.HouseholdId).IsRequired();
     builder.Property(m => m.SyncStamp).IsRequired();
     builder.Property(m => m.UpdatedAtUtc).IsRequired();

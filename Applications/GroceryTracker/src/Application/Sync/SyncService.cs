@@ -302,8 +302,15 @@ public sealed class SyncService : ISyncService
     return stamps.DefaultIfEmpty(0L).Max();
   }
 
-  private async Task<string?> ValidateMemberAsync(Member member, CancellationToken cancellationToken) =>
-    await HouseholdMissingAsync(member.HouseholdId, cancellationToken);
+  private async Task<string?> ValidateMemberAsync(Member member, CancellationToken cancellationToken)
+  {
+    if (member.ShareWeight < 0m || member.ShareWeight > 100000m)
+    {
+      return "A share cannot be negative or absurdly large.";
+    }
+
+    return await HouseholdMissingAsync(member.HouseholdId, cancellationToken);
+  }
 
   private async Task<string?> ValidateStoreAsync(Store store, CancellationToken cancellationToken) =>
     await HouseholdMissingAsync(store.HouseholdId, cancellationToken);
@@ -400,6 +407,7 @@ public sealed class SyncService : ISyncService
   private static void CopyMember(Member target, Member source)
   {
     target.DisplayName = source.DisplayName;
+    target.ShareWeight = source.ShareWeight;
     target.HouseholdId = source.HouseholdId;
   }
 

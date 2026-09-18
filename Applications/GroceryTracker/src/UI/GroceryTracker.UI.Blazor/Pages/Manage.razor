@@ -79,13 +79,23 @@ else
     <section class="card">
         <div class="card-header"><h2>People</h2></div>
 
-        <p class="text-sm muted">Everyone who shares the groceries. Each trip records who paid, and the Balance screen works out who owes whom.</p>
+        <p class="text-sm muted">
+            Everyone who shares the groceries. Each trip records who paid, and the Balance screen works out
+            who owes whom. <strong>Share</strong> is each person's part of the costs: with 1 and 1 everyone
+            pays equally, with 2 and 1 the first person carries two thirds.
+        </p>
 
         <ul class="list">
             @foreach (var member in _members)
             {
                 <li class="list-row">
-                    <input class="grow" value="@member.DisplayName" @onchange="e => RenameMemberAsync(member, e.Value?.ToString())" />
+                    <input class="grow" value="@member.DisplayName" aria-label="Name"
+                           @onchange="e => RenameMemberAsync(member, e.Value?.ToString())" />
+                    <input type="number" step="0.1" min="0" inputmode="decimal" style="width:5rem;"
+                           aria-label="@($"Share of {member.DisplayName}")"
+                           value="@member.ShareWeight.ToString(CultureInfo.InvariantCulture)"
+                           @onchange="e => ChangeShareAsync(member, e.Value?.ToString())" />
+                    <span class="text-sm muted nowrap" style="width:3.2rem; text-align:right;">@SharePercent(member)</span>
                     <button class="btn btn-sm btn-danger" @onclick="() => DeleteMemberAsync(member)">Remove</button>
                 </li>
             }
@@ -229,6 +239,26 @@ else
 
     member.DisplayName = name.Trim();
     await Data.SaveMemberAsync(member);
+  }
+
+  private string SharePercent(Member member)
+  {
+    var total = _members.Sum(m => m.ShareWeight);
+    return total <= 0m ? "–" : $"{member.ShareWeight / total:P0}";
+  }
+
+  private async Task ChangeShareAsync(Member member, string? text)
+  {
+    if (!decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var weight)
+      || weight < 0m || weight > 1000m)
+    {
+      await LoadAsync();
+      return;
+    }
+
+    member.ShareWeight = decimal.Round(weight, 4);
+    await Data.SaveMemberAsync(member);
+    await LoadAsync();
   }
 
   private async Task DeleteMemberAsync(Member member)

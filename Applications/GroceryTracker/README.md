@@ -109,7 +109,7 @@ set -x ConnectionStrings__DefaultConnection "Host=localhost;Port=5432;Database=g
 dotnet run --project src/Bff
 ```
 
-The BFF migrates the database and seeds a household with eight starter categories on startup.
+The BFF migrates the database and seeds a household with two categories, *Groceries* and *Household*, on startup.
 
 To work on the frontend with hot reload, run the client separately. Set `ApiBaseUrl` in
 `wwwroot/appsettings.Development.json` to `http://localhost:5000` first — it ships empty, which
@@ -154,8 +154,8 @@ like any other edit.
   balance is built on.
 - **Formats.** `81,50 €`, `1.234,56`, `1,234.56`, `-9,50 €`; dates as `04.04.2024`, `4.4.24` or
   `2024-04-04`; comma- or semicolon-separated, with or without a BOM.
-- **Everything lands uncategorised** at a store called *Imported* (rename it under Manage), so the
-  dashboard totals match the sheet exactly.
+- **Everything lands in one category** (you pick it in the preview; *Groceries* by default) at a
+  store called *Imported* (rename it under Manage). Totals match the sheet exactly.
 - **Re-importing is safe.** A booking's id is derived from its date, amount and which repeat of that
   pair it is, so importing the same file again — or a longer export of the same sheet — only adds
   rows that are not here yet, and trips you deleted afterwards are not resurrected. Importing again
@@ -172,7 +172,9 @@ like any other edit.
 **Balance** shows who owes whom for the shared groceries and how to settle it up.
 
 - Every trip records **who paid** (set on the trip, or by assigning CSV columns to people).
-- Everyone carries an **equal share** of what was paid. A person's balance is what they paid, minus
+- Everyone carries a **share** of what was paid: equal by default, or set under **Manage → People**.
+  Shares are relative parts — 1 and 1 split evenly, 2 and 1 make the first person carry two thirds.
+  A person's balance is what they paid, minus
   their share, plus transfers they sent, minus transfers they received. Positive means they are
   owed; negative means they owe.
 - It suggests the **fewest transfers** that settle everything — one payment for two people, at most
@@ -364,7 +366,7 @@ curl -X POST http://localhost:8080/api/sync \
   -H 'Content-Type: application/json' -d '{"cursor":0,"operations":[]}'
 ```
 
-The last command should return a JSON payload with one seeded household and eight categories.
+The last command should return a JSON payload with one seeded household and two categories (Groceries, Household).
 
 ### 6. Open it up to your LAN
 

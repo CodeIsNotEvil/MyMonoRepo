@@ -9,6 +9,8 @@ public sealed record MemberBalance(
   Guid MemberId,
   string Name,
   decimal Paid,
+  decimal ShareWeight,
+  decimal SharePercent,
   decimal FairShare,
   decimal TransfersSent,
   decimal TransfersReceived,
@@ -41,7 +43,8 @@ public sealed record BalanceSummary(
 /// Works out who owes whom for shared grocery spending, and the fewest transfers that settle it.
 /// </summary>
 /// <remarks>
-/// Every household member carries an equal share of everything that was paid for. A member's balance
+/// Every household member carries a share of everything that was paid for: equal by default, or in
+/// proportion to their <see cref="Member.ShareWeight"/>. A member's balance
 /// is what they paid, minus their share, plus transfers they sent, minus transfers they received —
 /// so recording a settlement moves the balance towards zero, and a balance of zero means square.
 /// Pure and free of EF Core and HTTP, so the BFF and the offline browser compute identical numbers.
@@ -79,7 +82,15 @@ public static class BalanceCalculator
       return new BalanceSummary([], [], 0m, unassignedTotal, unassigned.Count);
     }
 
-    var share = totalAssigned / people.Count;
+    var weights = people.ToDictionary(p => p.Id, p => Math.Max(0m, p.ShareWeight));
+    var weightSum = weights.Values.Sum();
+
+    // Nobody is left with a share of nothing: if every weight is zero, fall back to an even split.
+    if (weightSum <= 0m)
+    {
+      weights = people.ToDictionary(p => p.Id, _ => 1m);
+      weightSum = people.Count;
+    }
 
     var liveSettlements = settlements
       .Where(s => !s.IsDeleted && knownIds.Contains(s.FromMemberId) && knownIds.Contains(s.ToMemberId))
@@ -91,11 +102,15 @@ public static class BalanceCalculator
         var paid = assigned.Where(t => t.PaidByMemberId == person.Id).Sum(t => t.TotalAmount);
         var sent = liveSettlements.Where(s => s.FromMemberId == person.Id).Sum(s => s.Amount);
         var received = liveSettlements.Where(s => s.ToMemberId == person.Id).Sum(s => s.Amount);
+        var fraction = weights[person.Id] / weightSum;
+        var share = totalAssigned * fraction;
 
         return new MemberBalance(
           person.Id,
           person.DisplayName,
           Round(paid),
+          weights[person.Id],
+          Round(fraction * 100m),
           Round(share),
           Round(sent),
           Round(received),
