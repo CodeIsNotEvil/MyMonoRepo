@@ -1,0 +1,42 @@
+# Native (non-container) BFF service for Ubuntu Server on the Pi.
+#
+#   sudo cp deploy/systemd/grocerytracker-bff.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now grocerytracker-bff
+#
+# The connection string holds a password, so it lives in an environment file readable only by root
+# rather than in this unit.
+
+[Unit]
+Description=Grocery Tracker BFF
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+WorkingDirectory=/opt/grocerytracker
+ExecStart=/usr/bin/dotnet /opt/grocerytracker/GroceryTracker.Bff.dll
+
+# Bound to loopback: nginx is the only thing that should reach it directly.
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5000
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+EnvironmentFile=/etc/grocerytracker/bff.env
+
+User=grocerytracker
+Group=grocerytracker
+
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=grocerytracker-bff
+
+# The service reads its own files and talks to PostgreSQL; it has no reason to write anywhere else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/grocerytracker
+
+[Install]
+WantedBy=multi-user.target
