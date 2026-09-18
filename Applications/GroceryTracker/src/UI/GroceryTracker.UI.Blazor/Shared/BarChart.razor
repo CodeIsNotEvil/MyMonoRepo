@@ -1,0 +1,99 @@
+@* Spend-over-time bars. Inline SVG so it renders offline with no charting library. *@
+
+@if (Points.Count == 0)
+{
+    <p class="muted text-sm mb-0">Nothing to chart for this period.</p>
+}
+else
+{
+    @* Uniform scaling (no preserveAspectRatio override) keeps the rounded data-ends circular
+       instead of smearing them horizontally as the card gets wider. *@
+    <svg class="chart" viewBox="@ViewBox" role="img" aria-label="@AriaLabel" style="height:auto;">
+        <line class="chart-axis" x1="0" y1="@Fmt(PlotHeight)" x2="@Fmt(Width)" y2="@Fmt(PlotHeight)"
+              vector-effect="non-scaling-stroke" />
+
+        @for (var i = 0; i < Points.Count; i++)
+        {
+            var point = Points[i];
+            var height = BarHeight(point.Value);
+            var x = (i * SlotWidth) + ((SlotWidth - BarWidth) / 2m);
+
+            <path class="chart-bar" d="@RoundedTopBar(x, PlotHeight - height, BarWidth, height)" fill="@Color">
+                <title>@point.Label: @point.Display</title>
+            </path>
+        }
+    </svg>
+
+    @* The values are spelled out here rather than only encoded by bar height, which is also what
+       satisfies the contrast relief rule for the paler category colours. *@
+    <div style="display:grid; grid-template-columns:repeat(@Points.Count, minmax(0,1fr)); gap:0; margin-top:.35rem;">
+        @foreach (var point in Points)
+        {
+            <div style="text-align:center; min-width:0; padding:0 2px;">
+                <div style="font-size:.7rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@point.Label</div>
+                <div style="font-size:.75rem; font-weight:600; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@point.Display</div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+  public sealed record Bar(string Label, decimal Value, string Display);
+
+  [Parameter, EditorRequired]
+  public IReadOnlyList<Bar> Points { get; set; } = [];
+
+  [Parameter]
+  public string Color { get; set; } = "var(--accent)";
+
+  [Parameter]
+  public string AriaLabel { get; set; } = "Spend over time";
+
+  private const decimal Width = 240m;
+  private const decimal PlotHeight = 56m;
+  private const decimal TotalHeight = 58m;
+  private const decimal CornerRadius = 2.5m;
+
+  /// <summary>
+  /// Stops one or two months from rendering as a wall of colour. Without a cap a single bar would
+  /// span the whole card, which reads as a filled panel rather than a measurement.
+  /// </summary>
+  private const decimal MaxBarWidth = 34m;
+
+  private string ViewBox => string.Create(CultureInfo.InvariantCulture, $"0 0 {Width} {TotalHeight}");
+
+  private decimal SlotWidth => Width / Math.Max(Points.Count, 1);
+
+  /// <summary>Bars are centred in their slot, leaving a surface gap so neighbours stay distinct.</summary>
+  private decimal BarWidth => Math.Min(SlotWidth * 0.68m, MaxBarWidth);
+
+  private decimal MaxValue => Points.Count == 0 ? 0m : Points.Max(p => p.Value);
+
+  private decimal BarHeight(decimal value)
+  {
+    if (MaxValue <= 0m || value <= 0m)
+    {
+      return 0m;
+    }
+
+    // A small floor keeps a low-but-real month visible rather than collapsing it onto the axis.
+    return Math.Max(value / MaxValue * (PlotHeight - 3m), 1m);
+  }
+
+  /// <summary>Bar with only its top corners rounded: soft data end, flat baseline.</summary>
+  private static string RoundedTopBar(decimal x, decimal y, decimal width, decimal height)
+  {
+    if (height <= 0m || width <= 0m)
+    {
+      return string.Empty;
+    }
+
+    var radius = Math.Min(CornerRadius, Math.Min(height, width / 2m));
+    var bottom = y + height;
+
+    return string.Create(CultureInfo.InvariantCulture,
+      $"M {x} {bottom} L {x} {y + radius} Q {x} {y} {x + radius} {y} L {x + width - radius} {y} Q {x + width} {y} {x + width} {y + radius} L {x + width} {bottom} Z");
+  }
+
+  private static string Fmt(decimal value) => value.ToString(CultureInfo.InvariantCulture);
+}

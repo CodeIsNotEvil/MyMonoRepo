@@ -1,0 +1,149 @@
+@page "/settings"
+@implements IDisposable
+@inject GroceryDataService Data
+@inject SyncEngine Sync
+@inject ConnectivityService Connectivity
+
+<PageTitle>Settings · Grocery Tracker</PageTitle>
+
+<h1>Settings</h1>
+
+<section class="card">
+    <div class="card-header"><h2>Sync</h2></div>
+
+    <ul class="list">
+        <li class="list-row">
+            <span class="grow">Connection</span>
+            <span class="badge @(Connectivity.IsOnline ? "badge-good" : "badge-warning")">
+                <span class="dot" aria-hidden="true"></span>
+                @(Connectivity.IsOnline ? "Online" : "Offline")
+            </span>
+        </li>
+        <li class="list-row">
+            <span class="grow">Waiting to upload</span>
+            <span class="amount">@Sync.PendingCount</span>
+        </li>
+        <li class="list-row">
+            <span class="grow">Last sync</span>
+            <span class="text-sm">@(Sync.LastSyncUtc is { } last ? last.ToLocalTime().ToString("g", CultureInfo.InvariantCulture) : "never")</span>
+        </li>
+    </ul>
+
+    <div class="btn-row mt-2">
+        <button class="btn btn-primary" @onclick="SyncNowAsync" disabled="@(Sync.Status == SyncStatus.Syncing)">
+            @(Sync.Status == SyncStatus.Syncing ? "Syncing…" : "Sync now")
+        </button>
+    </div>
+
+    @if (Sync.Status == SyncStatus.Failed)
+    {
+        <div class="alert alert-danger mt-2 mb-0">
+            The last sync failed. Your changes are safe on this device and will go up on the next try.
+        </div>
+    }
+</section>
+
+@if (Sync.LastConflicts.Count > 0)
+{
+    <section class="card">
+        <div class="card-header"><h2>Recent conflicts</h2></div>
+
+        <p class="text-sm muted">
+            The same record was edited on two devices. The most recent edit won; this is a record of
+            what happened so nothing disappears silently.
+        </p>
+
+        <ul class="list">
+            @foreach (var conflict in Sync.LastConflicts)
+            {
+                <li class="list-row">
+                    <div class="grow">
+                        <div class="row-title">@conflict.EntityType</div>
+                        <div class="row-sub">@conflict.Reason</div>
+                    </div>
+                    <span class="badge @ConflictClass(conflict.Outcome)">@ConflictLabel(conflict.Outcome)</span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+<section class="card">
+    <div class="card-header"><h2>This device</h2></div>
+
+    <p class="text-sm muted">
+        Grocery data is cached in this browser so the app keeps working without a connection.
+        Resetting clears that cache and pulls a fresh copy from the server.
+    </p>
+
+    @if (Sync.PendingCount > 0)
+    {
+        <div class="alert alert-warning">
+            @Sync.PendingCount change@(Sync.PendingCount == 1 ? "" : "s") have not reached the server yet.
+            Resetting now would discard them.
+        </div>
+    }
+
+    @if (!_confirmingReset)
+    {
+        <button class="btn btn-danger" @onclick="() => _confirmingReset = true">Reset local data</button>
+    }
+    else
+    {
+        <div class="alert alert-danger">Clear this device's cache and re-download everything?</div>
+        <div class="btn-row">
+            <button class="btn btn-danger" @onclick="ResetAsync" disabled="@_resetting">Yes, reset</button>
+            <button class="btn btn-ghost" @onclick="() => _confirmingReset = false">Cancel</button>
+        </div>
+    }
+</section>
+
+<section class="card">
+    <div class="card-header"><h2>About</h2></div>
+    <p class="text-sm mb-0 muted">
+        Grocery Tracker stores everything locally first and syncs to your own server when it can
+        reach it. Install it from your browser's menu to keep it on your home screen.
+    </p>
+</section>
+
+@code {
+  private bool _confirmingReset;
+  private bool _resetting;
+
+  protected override void OnInitialized() => Sync.Changed += OnChanged;
+
+  private async Task SyncNowAsync() => await Sync.SyncAsync();
+
+  private async Task ResetAsync()
+  {
+    _resetting = true;
+
+    try
+    {
+      await Data.ResetLocalDataAsync();
+      _confirmingReset = false;
+    }
+    finally
+    {
+      _resetting = false;
+    }
+  }
+
+  private static string ConflictClass(ConflictOutcome outcome) => outcome switch
+  {
+    ConflictOutcome.ServerWon => "badge-warning",
+    ConflictOutcome.ClientWon => "badge-muted",
+    _ => "badge-critical",
+  };
+
+  private static string ConflictLabel(ConflictOutcome outcome) => outcome switch
+  {
+    ConflictOutcome.ServerWon => "Server kept",
+    ConflictOutcome.ClientWon => "This device won",
+    _ => "Rejected",
+  };
+
+  private void OnChanged() => InvokeAsync(StateHasChanged);
+
+  public void Dispose() => Sync.Changed -= OnChanged;
+}

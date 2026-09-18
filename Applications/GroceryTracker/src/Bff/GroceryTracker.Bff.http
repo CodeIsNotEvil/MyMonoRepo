@@ -1,0 +1,78 @@
+@host = http://localhost:5000
+
+### Health
+GET {{host}}/health
+
+### First sync: cursor 0 pulls everything, including the seeded household and categories.
+# Note the household id and a category id from the response for the requests below.
+POST {{host}}/api/sync
+Content-Type: application/json
+
+{
+  "cursor": 0,
+  "operations": []
+}
+
+### Push a store. entityId and the payload's id must match, and operationId is the idempotency key:
+# sending this twice applies it once.
+POST {{host}}/api/sync
+Content-Type: application/json
+
+{
+  "cursor": 1,
+  "operations": [
+    {
+      "operationId": "11111111-1111-1111-1111-111111111111",
+      "entityType": "Store",
+      "entityId": "22222222-2222-2222-2222-222222222222",
+      "kind": "Upsert",
+      "baseSyncStamp": 0,
+      "clientTimestampUtc": "2026-09-18T10:00:00Z",
+      "payloadJson": "{\"id\":\"22222222-2222-2222-2222-222222222222\",\"name\":\"Aldi\",\"householdId\":\"PASTE-HOUSEHOLD-ID\",\"syncStamp\":0,\"updatedAtUtc\":\"2026-09-18T10:00:00Z\",\"isDeleted\":false}"
+    }
+  ]
+}
+
+### Push a trip against that store.
+POST {{host}}/api/sync
+Content-Type: application/json
+
+{
+  "cursor": 2,
+  "operations": [
+    {
+      "operationId": "33333333-3333-3333-3333-333333333333",
+      "entityType": "ShoppingTrip",
+      "entityId": "44444444-4444-4444-4444-444444444444",
+      "kind": "Upsert",
+      "baseSyncStamp": 0,
+      "clientTimestampUtc": "2026-09-18T10:05:00Z",
+      "payloadJson": "{\"id\":\"44444444-4444-4444-4444-444444444444\",\"purchasedOn\":\"2026-09-18\",\"totalAmount\":42.50,\"note\":\"Weekly shop\",\"storeId\":\"22222222-2222-2222-2222-222222222222\",\"paidByMemberId\":null,\"householdId\":\"PASTE-HOUSEHOLD-ID\",\"syncStamp\":0,\"updatedAtUtc\":\"2026-09-18T10:05:00Z\",\"isDeleted\":false}"
+    }
+  ]
+}
+
+### Tombstone the trip. A delete carries no payload, only the stamp it was based on.
+POST {{host}}/api/sync
+Content-Type: application/json
+
+{
+  "cursor": 3,
+  "operations": [
+    {
+      "operationId": "55555555-5555-5555-5555-555555555555",
+      "entityType": "ShoppingTrip",
+      "entityId": "44444444-4444-4444-4444-444444444444",
+      "kind": "Delete",
+      "baseSyncStamp": 3,
+      "clientTimestampUtc": "2026-09-18T10:10:00Z",
+      "payloadJson": null
+    }
+  ]
+}
+
+### Analytics, default window (current month plus the five before it)
+GET {{host}}/api/analytics/summary
+
+### Analytics, explicit window and granularity
+GET {{host}}/api/analytics/summary?from=2026-01-01&to=2026-09-30&granularity=Week

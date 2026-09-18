@@ -1,0 +1,45 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject SyncEngine Sync
+
+<div class="page">
+    <NavMenu />
+
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+        <header class="app-header">
+            <div class="app-header-inner">
+                <span class="app-title">@Title</span>
+                <SyncIndicator />
+            </div>
+        </header>
+
+        <main class="app-main">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+  private const string Title = "Grocery Tracker";
+
+  protected override void OnInitialized()
+  {
+    Sync.Changed += OnSyncChanged;
+  }
+
+  /// <summary>
+  /// Started after the first render so the shell paints immediately. Booting the sync engine
+  /// inside OnInitialized would hold the whole UI behind a network round trip on a cold start.
+  /// </summary>
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      await Sync.InitialiseAsync();
+    }
+  }
+
+  private void OnSyncChanged() => InvokeAsync(StateHasChanged);
+
+  public void Dispose() => Sync.Changed -= OnSyncChanged;
+}

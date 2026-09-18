@@ -1,0 +1,108 @@
+@page "/trips"
+@implements IDisposable
+@inject GroceryDataService Data
+@inject SyncEngine Sync
+@inject NavigationManager Nav
+
+<PageTitle>Trips · Grocery Tracker</PageTitle>
+
+<div style="display:flex; align-items:center; gap:.75rem;">
+    <h1 style="margin:0;">Trips</h1>
+    <button class="btn btn-primary btn-sm" style="margin-left:auto;" @onclick="@(() => Nav.NavigateTo("trips/new"))">
+        + Add trip
+    </button>
+</div>
+
+@if (_loading)
+{
+    <p class="muted mt-2">Loading…</p>
+}
+else if (_trips.Count == 0)
+{
+    <div class="empty">
+        <p>No trips yet. Log one right at the till — it works without a connection.</p>
+        <button class="btn btn-primary" @onclick="@(() => Nav.NavigateTo("trips/new"))">Add your first trip</button>
+    </div>
+}
+else
+{
+    @foreach (var group in _trips.GroupBy(t => new DateOnly(t.PurchasedOn.Year, t.PurchasedOn.Month, 1)).OrderByDescending(g => g.Key))
+    {
+        <section class="card">
+            <div class="card-header">
+                <h2>@group.Key.ToString("MMMM yyyy", CultureInfo.InvariantCulture)</h2>
+                <span class="spacer amount">@Money.Format(group.Sum(t => t.TotalAmount), Currency)</span>
+            </div>
+
+            <ul class="list">
+                @foreach (var trip in group)
+                {
+                    <li class="list-row" style="cursor:pointer;" @onclick="() => Edit(trip.Id)">
+                        <div class="grow">
+                            <div class="row-title">@StoreName(trip.StoreId)</div>
+                            <div class="row-sub">@TripSubtitle(trip)</div>
+                        </div>
+                        <span class="amount">@Money.Format(trip.TotalAmount, Currency)</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+}
+
+@code {
+  private List<ShoppingTrip> _trips = [];
+  private Dictionary<Guid, string> _stores = [];
+  private Household? _household;
+  private bool _loading = true;
+
+  private string Currency => _household?.CurrencyCode ?? "EUR";
+
+  protected override async Task OnInitializedAsync()
+  {
+    Sync.Changed += OnSyncChanged;
+    await LoadAsync();
+  }
+
+  private async Task LoadAsync()
+  {
+    _loading = true;
+    _household = await Data.GetHouseholdAsync();
+    _stores = (await Data.GetStoresAsync()).ToDictionary(s => s.Id, s => s.Name);
+    _trips = await Data.GetTripsAsync();
+    _loading = false;
+  }
+
+  // A trip can outlive the store it points at if another device retired that store.
+  private string StoreName(Guid storeId) => _stores.GetValueOrDefault(storeId, "Unknown store");
+
+  private static string TripSubtitle(ShoppingTrip trip)
+  {
+    var parts = new List<string> { trip.PurchasedOn.ToString("ddd d MMM", CultureInfo.InvariantCulture) };
+
+    if (trip.Items.Count > 0)
+    {
+      parts.Add($"{trip.Items.Count} item{(trip.Items.Count == 1 ? string.Empty : "s")}");
+    }
+
+    if (!string.IsNullOrWhiteSpace(trip.Note))
+    {
+      parts.Add(trip.Note);
+    }
+
+    return string.Join(" · ", parts);
+  }
+
+  private void Edit(Guid id) => Nav.NavigateTo($"trips/{id}");
+
+  private void OnSyncChanged() => InvokeAsync(async () =>
+  {
+    if (Sync.Status is SyncStatus.Idle && !_loading)
+    {
+      await LoadAsync();
+      StateHasChanged();
+    }
+  });
+
+  public void Dispose() => Sync.Changed -= OnSyncChanged;
+}
