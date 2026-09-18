@@ -35,6 +35,12 @@ server {
   gzip_types text/plain text/css text/javascript application/javascript application/json
              application/wasm application/octet-stream image/svg+xml application/manifest+json;
 
+  # Declaring `types` in a server block *replaces* the MIME table inherited from http{} rather than
+  # extending it, so the stock table has to be re-included here (it wraps itself in its own `types`
+  # block, hence no nesting) — otherwise index.html, .css and .js all lose their types, fall back to
+  # application/octet-stream, and the browser downloads the page instead of rendering it. Two blocks
+  # in the same context accumulate, so the extras below just add to it.
+  include /etc/nginx/mime.types;
   types {
     application/wasm wasm;
     application/octet-stream dat;
