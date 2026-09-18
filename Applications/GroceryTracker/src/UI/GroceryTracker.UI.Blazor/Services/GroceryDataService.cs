@@ -2,23 +2,44 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using GroceryTracker.Contracts.Sync;
 using GroceryTracker.Domain.Analytics;
+using GroceryTracker.Domain.Balance;
 using GroceryTracker.Domain.Import;
 using GroceryTracker.Domain.Model;
 using GroceryTracker.Domain.Sync;
 
 namespace GroceryTracker.UI.Blazor.Services;
 
+/// <summary>Which person a spreadsheet column belongs to.</summary>
+/// <param name="MemberId">An existing person, or null.</param>
+/// <param name="NewMemberName">Set instead of <paramref name="MemberId"/> to create the person.</param>
+public sealed record ColumnAssignment(int Column, Guid? MemberId, string? NewMemberName);
+
+/// <summary>A trip that already exists and only needs a payer assigned.</summary>
+public sealed record PayerUpdate(Guid TripId, Guid MemberId);
+
 /// <summary>What an import would do, worked out before anything is written.</summary>
 /// <param name="NewTrips">Bookings not yet on this device, ready to be saved.</param>
+/// <param name="PayerUpdates">
+/// Bookings that are already here but were imported without a payer (or with a different one), so
+/// re-importing with people assigned fixes them instead of duplicating them.
+/// </param>
+/// <param name="NewMembers">People to create, or bring back if they were removed.</param>
 /// <param name="AlreadyImported">
-/// Bookings whose id already exists locally. This includes trips the user deleted afterwards, so a
+/// Bookings that are here and need no change. This includes trips the user deleted afterwards, so a
 /// re-import does not resurrect them.
 /// </param>
 public sealed record ImportPlan(
   Household Household,
   Guid StoreId,
   IReadOnlyList<ShoppingTrip> NewTrips,
-  int AlreadyImported);
+  IReadOnlyList<PayerUpdate> PayerUpdates,
+  IReadOnlyList<Member> NewMembers,
+  int AlreadyImported)
+{
+  public bool HasChanges => NewTrips.Count > 0 || PayerUpdates.Count > 0 || NewMembers.Count > 0;
+}
+
+public sealed record ImportResult(int NewTrips, int UpdatedTrips, int NewMembers);
 
 /// <summary>
 /// The only data API the pages use.
@@ -36,6 +57,7 @@ public sealed class GroceryDataService
   private const string Categories = "categories";
   private const string Trips = "trips";
   private const string Items = "items";
+  private const string Settlements = "settlements";
 
   private readonly LocalStore _store;
   private readonly SyncEngine _sync;
@@ -232,13 +254,48 @@ public sealed class GroceryDataService
 
   private const string ImportStoreName = "Imported";
   private const string ImportStoreKey = "csv-import-store";
+  private const string CurrentMemberSetting = "currentMemberId";
+
+  public async Task<List<Settlement>> GetSettlementsAsync() =>
+    (await _store.GetSettlementsAsync())
+      .Where(s => !s.IsDeleted)
+      .OrderByDescending(s => s.Date)
+      .ThenByDescending(s => s.UpdatedAtUtc)
+      .ToList();
+
+  public async Task SaveSettlementAsync(Settlement settlement)
+  {
+    await UpsertAsync(Settlements, settlement, SyncEntityType.Settlement);
+    TriggerSync();
+  }
+
+  public async Task DeleteSettlementAsync(Settlement settlement)
+  {
+    await TombstoneAsync(Settlements, settlement, SyncEntityType.Settlement);
+    TriggerSync();
+  }
+
+  /// <summary>Who owes whom, computed from this device's cache so it works with no connection.</summary>
+  public async Task<BalanceSummary> GetBalanceAsync() => BalanceCalculator.Calculate(
+    await _store.GetTripsAsync(),
+    await _store.GetMembersAsync(),
+    await _store.GetSettlementsAsync());
+
+  /// <summary>Which person this device belongs to, so the balance can say "you owe" instead of a name.</summary>
+  public async Task<Guid?> GetCurrentMemberIdAsync() =>
+    Guid.TryParse(await _store.GetSettingAsync(CurrentMemberSetting), out var id) ? id : null;
+
+  public async Task SetCurrentMemberIdAsync(Guid? memberId) =>
+    await _store.SetSettingAsync(CurrentMemberSetting, memberId?.ToString());
 
   /// <summary>
-  /// Works out which parsed bookings are new. Ids come from the booking's key, so importing the same
-  /// file again (or a longer export of the same sheet) only adds what is not here yet.
+  /// Works out what importing would change. Ids come from the booking's key, so importing the same
+  /// file again only adds what is not here yet, and only touches existing trips to assign a payer.
   /// </summary>
   /// <returns>Null until this device has synced a household to attach the trips to.</returns>
-  public async Task<ImportPlan?> PlanImportAsync(IReadOnlyList<ImportedBooking> bookings)
+  public async Task<ImportPlan?> PlanImportAsync(
+    IReadOnlyList<ImportedBooking> bookings,
+    IReadOnlyList<ColumnAssignment> assignments)
   {
     var household = await GetHouseholdAsync();
     if (household is null)
@@ -247,63 +304,149 @@ public sealed class GroceryDataService
     }
 
     var storeId = DeterministicGuid.Create(household.Id, ImportStoreKey);
-    var knownIds = (await _store.GetTripsAsync()).Select(t => t.Id).ToHashSet();
+    var localMembers = await _store.GetMembersAsync();
+    var newMembers = new Dictionary<Guid, Member>();
+
+    var payerByColumn = new Dictionary<int, Guid>();
+    foreach (var assignment in assignments)
+    {
+      var payer = ResolvePayer(assignment, household, localMembers, newMembers);
+      if (payer is { } id)
+      {
+        payerByColumn[assignment.Column] = id;
+      }
+    }
+
+    var localTrips = (await _store.GetTripsAsync()).ToDictionary(t => t.Id);
 
     var fresh = new List<ShoppingTrip>();
-    var already = 0;
+    var updates = new List<PayerUpdate>();
+    var unchanged = 0;
 
     foreach (var booking in bookings)
     {
       var id = DeterministicGuid.Create(household.Id, booking.Key);
+      Guid? payer = payerByColumn.TryGetValue(booking.Column, out var payerId) ? payerId : null;
 
-      if (knownIds.Contains(id))
+      if (!localTrips.TryGetValue(id, out var existing))
       {
-        already++;
-        continue;
+        fresh.Add(new ShoppingTrip
+        {
+          Id = id,
+          PurchasedOn = booking.Date,
+          TotalAmount = booking.Amount,
+          StoreId = storeId,
+          HouseholdId = household.Id,
+          PaidByMemberId = payer,
+        });
       }
-
-      fresh.Add(new ShoppingTrip
+      else if (!existing.IsDeleted && payer is { } assigned && existing.PaidByMemberId != assigned)
       {
-        Id = id,
-        PurchasedOn = booking.Date,
-        TotalAmount = booking.Amount,
-        StoreId = storeId,
-        HouseholdId = household.Id,
-      });
+        updates.Add(new PayerUpdate(id, assigned));
+      }
+      else
+      {
+        unchanged++;
+      }
     }
 
-    return new ImportPlan(household, storeId, fresh, already);
+    return new ImportPlan(household, storeId, fresh, updates, [.. newMembers.Values], unchanged);
   }
 
   /// <summary>
-  /// Saves the planned trips through the normal outbox, so an import made offline uploads on the
-  /// next sync like any other edit. Bookings carry no store, so they share one "Imported" store.
+  /// Picks the member a column belongs to, reusing a person with that name instead of creating a
+  /// duplicate. New people get an id derived from their name, so two devices importing the same
+  /// sheet end up with the same person rather than two.
   /// </summary>
-  public async Task<int> ImportAsync(ImportPlan plan)
+  private static Guid? ResolvePayer(
+    ColumnAssignment assignment,
+    Household household,
+    List<Member> localMembers,
+    Dictionary<Guid, Member> newMembers)
+  {
+    if (assignment.MemberId is { } chosen)
+    {
+      return chosen;
+    }
+
+    var name = assignment.NewMemberName?.Trim();
+    if (string.IsNullOrEmpty(name))
+    {
+      return null;
+    }
+
+    var sameName = localMembers.FirstOrDefault(m =>
+      !m.IsDeleted && string.Equals(m.DisplayName, name, StringComparison.CurrentCultureIgnoreCase));
+    if (sameName is not null)
+    {
+      return sameName.Id;
+    }
+
+    var id = DeterministicGuid.Create(household.Id, $"csv-member|{name.ToLowerInvariant()}");
+
+    if (!newMembers.ContainsKey(id))
+    {
+      // A previously removed person is brought back rather than duplicated.
+      newMembers[id] = localMembers.FirstOrDefault(m => m.Id == id)
+        ?? new Member { Id = id, DisplayName = name, HouseholdId = household.Id };
+    }
+
+    return id;
+  }
+
+  /// <summary>
+  /// Saves the plan through the normal outbox, so an import made offline uploads on the next sync
+  /// like any other edit. Bookings carry no store, so they share one "Imported" store.
+  /// </summary>
+  public async Task<ImportResult> ImportAsync(ImportPlan plan)
   {
     ArgumentNullException.ThrowIfNull(plan);
 
-    if (plan.NewTrips.Count == 0)
+    if (!plan.HasChanges)
     {
-      return 0;
+      return new ImportResult(0, 0, 0);
     }
 
-    var store = (await _store.GetStoresAsync()).FirstOrDefault(s => s.Id == plan.StoreId);
-
-    // Trips need a store to point at, so create it — or bring it back if it was removed.
-    if (store is null || store.IsDeleted)
+    foreach (var member in plan.NewMembers)
     {
-      store ??= new Store { Id = plan.StoreId, Name = ImportStoreName, HouseholdId = plan.Household.Id };
-      await UpsertAsync(Stores, store, SyncEntityType.Store);
+      await UpsertAsync(Members, member, SyncEntityType.Member);
     }
 
-    foreach (var trip in plan.NewTrips)
+    if (plan.NewTrips.Count > 0)
     {
-      await UpsertAsync(Trips, trip, SyncEntityType.ShoppingTrip);
+      var store = (await _store.GetStoresAsync()).FirstOrDefault(s => s.Id == plan.StoreId);
+
+      // Trips need a store to point at, so create it — or bring it back if it was removed.
+      if (store is null || store.IsDeleted)
+      {
+        store ??= new Store { Id = plan.StoreId, Name = ImportStoreName, HouseholdId = plan.Household.Id };
+        await UpsertAsync(Stores, store, SyncEntityType.Store);
+      }
+
+      foreach (var trip in plan.NewTrips)
+      {
+        await UpsertAsync(Trips, trip, SyncEntityType.ShoppingTrip);
+      }
+    }
+
+    if (plan.PayerUpdates.Count > 0)
+    {
+      // Update the cached trips themselves, so each edit carries the stamp the server last gave us
+      // and is a clean edit rather than looking like a conflicting one.
+      var trips = (await _store.GetTripsAsync()).ToDictionary(t => t.Id);
+
+      foreach (var update in plan.PayerUpdates)
+      {
+        if (trips.TryGetValue(update.TripId, out var trip))
+        {
+          trip.PaidByMemberId = update.MemberId;
+          await UpsertAsync(Trips, trip, SyncEntityType.ShoppingTrip);
+        }
+      }
     }
 
     TriggerSync();
-    return plan.NewTrips.Count;
+    return new ImportResult(plan.NewTrips.Count, plan.PayerUpdates.Count, plan.NewMembers.Count);
   }
 
   /// <summary>Drops the local cache so the next sync re-pulls everything from scratch.</summary>

@@ -46,6 +46,17 @@ erDiagram
         long SyncStamp
         bool IsDeleted
     }
+    SETTLEMENT {
+        Guid Id PK
+        Guid FromMemberId FK
+        Guid ToMemberId FK
+        decimal Amount
+        DateOnly Date
+        string Note
+        Guid HouseholdId FK
+        long SyncStamp
+        bool IsDeleted
+    }
     EXPENSEITEM {
         Guid Id PK
         string Description
@@ -65,6 +76,9 @@ erDiagram
     HOUSEHOLD ||--o{ SHOPPINGTRIP : "records"
     STORE ||--o{ SHOPPINGTRIP : "was visited on"
     MEMBER |o--o{ SHOPPINGTRIP : "paid for"
+    HOUSEHOLD ||--o{ SETTLEMENT : "records"
+    MEMBER ||--o{ SETTLEMENT : "sent"
+    MEMBER ||--o{ SETTLEMENT : "received"
     SHOPPINGTRIP ||--o{ EXPENSEITEM : "itemised as"
     CATEGORY |o--o{ EXPENSEITEM : "classifies"
 ```
@@ -79,6 +93,16 @@ or never.
 as uncategorised spend rather than dropping it. If items ever overshoot the receipt — a typo, a
 mis-keyed line — their attributions are scaled down proportionally, so the category slices always
 add up to exactly the headline total instead of inventing spend that never happened.
+
+## Who owes whom
+
+`ShoppingTrip.PaidByMemberId` says who paid. `BalanceCalculator` gives every member an **equal share**
+of everything that was paid, and a member's balance is *paid − share + transfers sent − transfers
+received*. A `Settlement` is a transfer between two members made to even that out: it moves balances
+towards zero and is **not spending**, so it never appears in `SpendAnalyzer`.
+
+Trips with no payer (or whose payer was removed) are left out of the balance rather than guessed at,
+and reported as unassigned so they can be fixed.
 
 ## Supporting tables
 

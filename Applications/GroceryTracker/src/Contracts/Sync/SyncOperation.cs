@@ -8,6 +8,10 @@ public enum SyncEntityType
   Category,
   ShoppingTrip,
   ExpenseItem,
+
+  // Appended rather than slotted in: the server applies operations in enum order, and a settlement
+  // only needs the members it points at to exist first.
+  Settlement,
 }
 
 public enum SyncOperationKind

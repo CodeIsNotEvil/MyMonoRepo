@@ -9,7 +9,11 @@ namespace GroceryTracker.Domain.Import;
 /// Stable identity for the booking (date, amount and which repeat of that pair it is). Turned into a
 /// deterministic id so importing the same file twice recognises what it already brought in.
 /// </param>
-public sealed record ImportedBooking(DateOnly Date, decimal Amount, string Key, int SourceLine);
+/// <param name="Column">Zero-based column the amount was in, which is how it is tied to a person.</param>
+public sealed record ImportedBooking(DateOnly Date, decimal Amount, string Key, int SourceLine, int Column);
+
+/// <summary>A column that held amounts, with the name from the header row if there is one.</summary>
+public sealed record CsvAmountColumn(int Index, string Header, int BookingCount, decimal Total);
 
 public sealed record SkippedRow(int Line, string Reason, string Raw);
 
@@ -20,7 +24,8 @@ public sealed record SkippedRow(int Line, string Reason, string Raw);
 public sealed record CsvParseResult(
   IReadOnlyList<ImportedBooking> Bookings,
   IReadOnlyList<SkippedRow> Skipped,
-  IReadOnlyList<ImportedBooking> DateOutliers);
+  IReadOnlyList<ImportedBooking> DateOutliers,
+  IReadOnlyList<CsvAmountColumn> Columns);
 
 /// <summary>
 /// Reads bookings out of a CSV export where only dates and amounts matter.
@@ -45,6 +50,7 @@ public static partial class GroceryCsvParser
     var skipped = new List<SkippedRow>();
     var occurrences = new Dictionary<string, int>();
     var seenFirstContentRow = false;
+    List<string>? header = null;
 
     foreach (var (line, fields) in ReadRows(text, DetectDelimiter(text)))
     {
@@ -54,17 +60,17 @@ public static partial class GroceryCsvParser
       }
 
       var dates = new List<DateOnly>();
-      var amounts = new List<decimal>();
+      var amounts = new List<(int Column, decimal Amount)>();
 
-      foreach (var field in fields)
+      for (var column = 0; column < fields.Count; column++)
       {
-        if (TryParseDate(field, out var date))
+        if (TryParseDate(fields[column], out var date))
         {
           dates.Add(date);
         }
-        else if (TryParseAmount(field, out var amount))
+        else if (TryParseAmount(fields[column], out var amount))
         {
-          amounts.Add(amount);
+          amounts.Add((column, amount));
         }
       }
 
@@ -75,7 +81,11 @@ public static partial class GroceryCsvParser
       {
         // The header row, e.g. "Mandy,Lukas,Datum". Anything later that is all text is worth
         // mentioning, because it could be a booking whose date or amount failed to parse.
-        if (!isFirstContentRow)
+        if (isFirstContentRow)
+        {
+          header = fields;
+        }
+        else
         {
           skipped.Add(new SkippedRow(line, "No date or amount found.", Describe(fields)));
         }
@@ -101,7 +111,7 @@ public static partial class GroceryCsvParser
         continue;
       }
 
-      foreach (var amount in amounts)
+      foreach (var (column, amount) in amounts)
       {
         if (amount == 0m)
         {
@@ -113,12 +123,27 @@ public static partial class GroceryCsvParser
         var occurrence = occurrences.GetValueOrDefault(baseKey);
         occurrences[baseKey] = occurrence + 1;
 
-        bookings.Add(new ImportedBooking(dates[0], amount, $"{baseKey}|{occurrence}", line));
+        bookings.Add(new ImportedBooking(dates[0], amount, $"{baseKey}|{occurrence}", line, column));
       }
     }
 
-    return new CsvParseResult(bookings, skipped, FindDateOutliers(bookings));
+    return new CsvParseResult(bookings, skipped, FindDateOutliers(bookings), DescribeColumns(bookings, header));
   }
+
+  private static List<CsvAmountColumn> DescribeColumns(IReadOnlyList<ImportedBooking> bookings, List<string>? header) =>
+    bookings
+      .GroupBy(b => b.Column)
+      .OrderBy(g => g.Key)
+      .Select(g =>
+      {
+        var name = header is not null && g.Key < header.Count ? header[g.Key].Trim() : string.Empty;
+        return new CsvAmountColumn(
+          g.Key,
+          name.Length > 0 ? name : $"Column {g.Key + 1}",
+          g.Count(),
+          g.Sum(b => b.Amount));
+      })
+      .ToList();
 
   /// <summary>
   /// Flags bookings more than <paramref name="maxGapDays"/> away from both neighbours in date order.

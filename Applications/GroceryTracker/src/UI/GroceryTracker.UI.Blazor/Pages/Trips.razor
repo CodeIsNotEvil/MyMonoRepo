@@ -53,6 +53,7 @@ else
 @code {
   private List<ShoppingTrip> _trips = [];
   private Dictionary<Guid, string> _stores = [];
+  private Dictionary<Guid, string> _members = [];
   private Household? _household;
   private bool _loading = true;
 
@@ -69,6 +70,7 @@ else
     _loading = true;
     _household = await Data.GetHouseholdAsync();
     _stores = (await Data.GetStoresAsync()).ToDictionary(s => s.Id, s => s.Name);
+    _members = (await Data.GetMembersAsync()).ToDictionary(m => m.Id, m => m.DisplayName);
     _trips = await Data.GetTripsAsync();
     _loading = false;
   }
@@ -76,9 +78,14 @@ else
   // A trip can outlive the store it points at if another device retired that store.
   private string StoreName(Guid storeId) => _stores.GetValueOrDefault(storeId, "Unknown store");
 
-  private static string TripSubtitle(ShoppingTrip trip)
+  private string TripSubtitle(ShoppingTrip trip)
   {
     var parts = new List<string> { trip.PurchasedOn.ToString("ddd d MMM", CultureInfo.InvariantCulture) };
+
+    if (trip.PaidByMemberId is { } payer && _members.TryGetValue(payer, out var payerName))
+    {
+      parts.Add(payerName);
+    }
 
     if (trip.Items.Count > 0)
     {

@@ -43,6 +43,18 @@
     }
 </section>
 
+@if (Sync.Status == SyncStatus.ServerReset)
+{
+    <div class="alert alert-danger">
+        <strong>The server's database was reset.</strong> This device still holds data from the old one,
+        so it has stopped syncing rather than mix the two up. Nothing has been lost yet.
+        <ul style="margin:.4rem 0 .4rem 1.1rem; padding:0;">
+            <li>To carry on from what the server has now, use <em>Reset local data</em> below. Whatever exists only on this device is discarded.</li>
+            <li>To bring your bookings back, re-import your CSV afterwards.</li>
+        </ul>
+    </div>
+}
+
 @if (Sync.LastConflicts.Count > 0)
 {
     <section class="card">

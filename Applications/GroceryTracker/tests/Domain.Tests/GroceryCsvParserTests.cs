@@ -234,6 +234,49 @@ public class GroceryCsvParserTests
   }
 
   [Fact]
+  public void Bookings_remember_which_column_they_came_from()
+  {
+    var result = GroceryCsvParser.Parse(SheetExport);
+
+    Assert.Equal(
+      [0, 1, 0, 0, 1, 1],
+      result.Bookings.Select(b => b.Column));
+  }
+
+  [Fact]
+  public void Amount_columns_are_named_after_the_header_with_counts_and_totals()
+  {
+    var result = GroceryCsvParser.Parse(SheetExport);
+
+    // The date column is not an amount column, so only the two people appear.
+    Assert.Equal(
+      [("Anna", 3, 205.84m), ("Ben", 3, 62.97m)],
+      result.Columns.Select(c => (c.Header, c.BookingCount, c.Total)));
+    Assert.Equal([0, 1], result.Columns.Select(c => c.Index));
+  }
+
+  [Fact]
+  public void Columns_without_a_header_name_fall_back_to_their_position()
+  {
+    var noHeader = GroceryCsvParser.Parse("\"5,00 €\",,01.01.2025\n,\"6,00 €\",02.01.2025\n");
+    Assert.Equal(["Column 1", "Column 2"], noHeader.Columns.Select(c => c.Header));
+
+    var blankName = GroceryCsvParser.Parse(",Ben,Datum\n\"5,00 €\",,01.01.2025\n");
+    Assert.Equal("Column 1", Assert.Single(blankName.Columns).Header);
+  }
+
+  [Fact]
+  public void Mapping_columns_does_not_change_a_bookings_identity()
+  {
+    // The same booking must get the same key whichever column it is in, so re-importing after
+    // assigning people finds the trips that already exist instead of duplicating them.
+    var inFirst = GroceryCsvParser.Parse("A,B,D\n\"5,00 €\",,01.01.2025\n");
+    var inSecond = GroceryCsvParser.Parse("A,B,D\n,\"5,00 €\",01.01.2025\n");
+
+    Assert.Equal(inFirst.Bookings.Single().Key, inSecond.Bookings.Single().Key);
+  }
+
+  [Fact]
   public void Empty_input_yields_nothing()
   {
     var result = GroceryCsvParser.Parse(string.Empty);

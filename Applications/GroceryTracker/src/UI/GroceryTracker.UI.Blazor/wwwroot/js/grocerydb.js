@@ -5,9 +5,11 @@
 // not reached the BFF yet; `meta` holds the sync cursor.
 
 const DB_NAME = 'grocerytracker';
-const DB_VERSION = 1;
+// Version 2 adds the settlements store. Upgrading only creates what is missing, so an existing
+// device keeps its cache and its outbox.
+const DB_VERSION = 2;
 
-export const ENTITY_STORES = ['households', 'members', 'stores', 'categories', 'trips', 'items'];
+export const ENTITY_STORES = ['households', 'members', 'stores', 'categories', 'trips', 'items', 'settlements'];
 
 let dbPromise = null;
 

@@ -10,6 +10,9 @@ public enum SyncStatus
   Syncing,
   Offline,
   Failed,
+
+  /// <summary>The server's database was wiped since this device last synced; see Settings.</summary>
+  ServerReset,
 }
 
 public sealed record SyncOutcome(SyncStatus Status, int Pulled, IReadOnlyList<SyncConflict> Conflicts)
@@ -140,6 +143,15 @@ public sealed class SyncEngine : IAsyncDisposable
       if (response is null)
       {
         throw new InvalidOperationException("The BFF returned an empty sync response.");
+      }
+
+      if (response.ServerReset)
+      {
+        // Keep everything as it is: the outbox and the cache are the only copy of this device's data
+        // left. The user decides whether to discard them (Settings) once they understand why.
+        _logger.LogWarning("The server reports that its database was reset since this device last synced.");
+        Status = SyncStatus.ServerReset;
+        return new SyncOutcome(SyncStatus.ServerReset, 0, []);
       }
 
       await _store.ApplyPayloadAsync(response.Payload);

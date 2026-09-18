@@ -146,21 +146,54 @@ in the browser, so it works offline: the trips are written to the device and go 
 like any other edit.
 
 - **Only dates and amounts are read.** Nothing depends on column names or order — a cell that looks
-  like a date is the date, a cell that looks like an amount is an amount. A sheet with one amount
-  column per person imports the same as one with a single column, and every filled amount cell
-  becomes its own trip (two people shopping on one day is two receipts). Who paid is ignored.
+  like a date is the date, a cell that looks like an amount is an amount, and every filled amount
+  cell becomes its own trip (two people shopping on one day is two receipts).
+- **You say who each amount column belongs to.** The preview lists every column of amounts with its
+  header, booking count and total, and a dropdown to pick an existing person, add a new one, or leave
+  it unassigned. A column headed with someone's name starts out as that person. The payer is what the
+  balance is built on.
 - **Formats.** `81,50 €`, `1.234,56`, `1,234.56`, `-9,50 €`; dates as `04.04.2024`, `4.4.24` or
   `2024-04-04`; comma- or semicolon-separated, with or without a BOM.
 - **Everything lands uncategorised** at a store called *Imported* (rename it under Manage), so the
   dashboard totals match the sheet exactly.
 - **Re-importing is safe.** A booking's id is derived from its date, amount and which repeat of that
   pair it is, so importing the same file again — or a longer export of the same sheet — only adds
-  rows that are not here yet, and trips you deleted afterwards are not resurrected.
+  rows that are not here yet, and trips you deleted afterwards are not resurrected. Importing again
+  *with people chosen* also assigns them to bookings that were imported without a payer, rather
+  than skipping them, so an earlier import made before people existed can be fixed in place.
 - **You see what will happen first**: how many bookings are new, the total, any rows that could not
   be read (with line numbers), refunds (negative amounts, which lower your spend), and dates that sit
   far from every other booking, which is nearly always a typo like 2015 for 2025. Fix those in the
   sheet *before* importing — a corrected row would arrive as a new booking and leave the wrong one
   behind.
+
+## Balancing between people
+
+**Balance** shows who owes whom for the shared groceries and how to settle it up.
+
+- Every trip records **who paid** (set on the trip, or by assigning CSV columns to people).
+- Everyone carries an **equal share** of what was paid. A person's balance is what they paid, minus
+  their share, plus transfers they sent, minus transfers they received. Positive means they are
+  owed; negative means they owe.
+- It suggests the **fewest transfers** that settle everything — one payment for two people, at most
+  *n − 1* for *n*. Choose **This device belongs to** once and the headline becomes personal: *You owe
+  € 58.25*, with a **Mark as paid** button.
+- **Transfers are tracked.** Marking a suggestion as paid (or recording one by hand) saves a
+  settlement that moves the balance towards zero. Settlements are not spending, so they never show
+  on the dashboard. Remove one and the balance comes back.
+- **Trips nobody is recorded as having paid for are left out** and called out with their total, so
+  the balance is never quietly wrong.
+- It is computed from the device's own cache, so it works offline, and settlements sync like
+  everything else.
+
+## If the server's database is wiped
+
+A device remembers how far it has synced. If the server's database is reset (for example
+`podman compose down -v`), that memory points at data that no longer exists. Rather than let the two
+drift apart silently, the server recognises a cursor from the future, applies nothing, and the app
+shows **Server reset** with an explanation under Settings. Your queued changes and cached data are
+left alone until you decide: **Reset local data** to carry on from what the server has, then
+re-import your CSV to bring the bookings back.
 
 ## Running the full stack locally with Podman
 
@@ -201,6 +234,13 @@ podman compose logs -f bff       # tail one service's logs
 podman compose down              # stop and remove containers (the postgres volume survives)
 podman compose down -v           # also wipe the database volume — start over from empty
 podman compose up -d --build     # rebuild after pulling code changes
+```
+
+If `podman compose` suddenly fails with `failed to connect to the docker API at unix:///run/user/…/podman/podman.sock`,
+the socket unit can report *active* while its socket file is gone. Recreate it:
+
+```fish
+systemctl --user restart podman.socket
 ```
 
 ### What had to change to make this Podman-clean

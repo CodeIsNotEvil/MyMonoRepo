@@ -45,6 +45,23 @@ public sealed class SyncService : ISyncService
   {
     ArgumentNullException.ThrowIfNull(request);
 
+    // A cursor from the future can only come from a database that has since been wiped: the counter
+    // never goes backwards. Applying the device's queued changes to a household that no longer
+    // exists would just get them rejected and dropped from its outbox, so refuse the whole request.
+    var lastIssued = await _db.SyncCounters.AsNoTracking()
+      .Select(c => c.LastStamp)
+      .SingleOrDefaultAsync(cancellationToken);
+
+    if (request.Cursor > lastIssued)
+    {
+      _logger.LogWarning(
+        "Refusing sync: device cursor {Cursor} is ahead of the server counter {Counter}; the database was reset.",
+        request.Cursor,
+        lastIssued);
+
+      return new SyncResponse(request.Cursor, [], [], SyncPayload.Empty, _timeProvider.GetUtcNow(), ServerReset: true);
+    }
+
     var applied = new List<Guid>();
     var conflicts = new List<SyncConflict>();
 
@@ -144,6 +161,7 @@ public sealed class SyncService : ISyncService
       SyncEntityType.Category => ApplyToSetAsync(_db.Categories, operation, CopyCategory, ValidateCategoryAsync, cancellationToken),
       SyncEntityType.ShoppingTrip => ApplyToSetAsync(_db.Trips, operation, CopyTrip, ValidateTripAsync, cancellationToken),
       SyncEntityType.ExpenseItem => ApplyToSetAsync(_db.Items, operation, CopyItem, ValidateItemAsync, cancellationToken),
+      SyncEntityType.Settlement => ApplyToSetAsync(_db.Settlements, operation, CopySettlement, ValidateSettlementAsync, cancellationToken),
       _ => Task.FromResult<SyncConflict?>(Reject(operation, $"Unknown entity type '{operation.EntityType}'.")),
     };
 
@@ -263,7 +281,8 @@ public sealed class SyncService : ISyncService
     await _db.Stores.AsNoTracking().Where(e => e.SyncStamp > cursor).ToListAsync(cancellationToken),
     await _db.Categories.AsNoTracking().Where(e => e.SyncStamp > cursor).ToListAsync(cancellationToken),
     await _db.Trips.AsNoTracking().Where(e => e.SyncStamp > cursor).ToListAsync(cancellationToken),
-    await _db.Items.AsNoTracking().Where(e => e.SyncStamp > cursor).ToListAsync(cancellationToken));
+    await _db.Items.AsNoTracking().Where(e => e.SyncStamp > cursor).ToListAsync(cancellationToken),
+    await _db.Settlements.AsNoTracking().Where(e => e.SyncStamp > cursor).ToListAsync(cancellationToken));
 
   /// <summary>
   /// The high-water mark is taken from rows this transaction can actually see rather than from the
@@ -277,6 +296,7 @@ public sealed class SyncService : ISyncService
       .Concat(payload.Categories)
       .Concat(payload.Trips)
       .Concat(payload.Items)
+      .Concat(payload.Settlements)
       .Select(e => e.SyncStamp);
 
     return stamps.DefaultIfEmpty(0L).Max();
@@ -324,6 +344,32 @@ public sealed class SyncService : ISyncService
       && !await ExistsAsync(_db.Categories, categoryId, cancellationToken))
     {
       return $"Category {categoryId} does not exist.";
+    }
+
+    return null;
+  }
+
+  private async Task<string?> ValidateSettlementAsync(Settlement settlement, CancellationToken cancellationToken)
+  {
+    var householdFailure = await HouseholdMissingAsync(settlement.HouseholdId, cancellationToken);
+    if (householdFailure is not null)
+    {
+      return householdFailure;
+    }
+
+    if (settlement.FromMemberId == settlement.ToMemberId)
+    {
+      return "A transfer needs two different people.";
+    }
+
+    if (!await ExistsAsync(_db.Members, settlement.FromMemberId, cancellationToken))
+    {
+      return $"Member {settlement.FromMemberId} does not exist.";
+    }
+
+    if (!await ExistsAsync(_db.Members, settlement.ToMemberId, cancellationToken))
+    {
+      return $"Member {settlement.ToMemberId} does not exist.";
     }
 
     return null;
@@ -377,6 +423,16 @@ public sealed class SyncService : ISyncService
     target.Note = source.Note;
     target.StoreId = source.StoreId;
     target.PaidByMemberId = source.PaidByMemberId;
+    target.HouseholdId = source.HouseholdId;
+  }
+
+  private static void CopySettlement(Settlement target, Settlement source)
+  {
+    target.FromMemberId = source.FromMemberId;
+    target.ToMemberId = source.ToMemberId;
+    target.Amount = source.Amount;
+    target.Date = source.Date;
+    target.Note = source.Note;
     target.HouseholdId = source.HouseholdId;
   }
 

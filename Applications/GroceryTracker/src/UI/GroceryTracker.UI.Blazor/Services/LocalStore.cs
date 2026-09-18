@@ -56,6 +56,8 @@ public sealed class LocalStore : IAsyncDisposable
 
   public async Task<List<ExpenseItem>> GetItemsAsync() => await GetAllAsync<ExpenseItem>("items");
 
+  public async Task<List<Settlement>> GetSettlementsAsync() => await GetAllAsync<Settlement>("settlements");
+
   public async Task<List<TEntity>> GetAllAsync<TEntity>(string storeName)
   {
     var module = await ModuleAsync();
@@ -81,6 +83,7 @@ public sealed class LocalStore : IAsyncDisposable
       categories = payload.Categories,
       trips = payload.Trips,
       items = payload.Items,
+      settlements = payload.Settlements,
     });
   }
 
@@ -106,6 +109,19 @@ public sealed class LocalStore : IAsyncDisposable
 
     var module = await ModuleAsync();
     await module.InvokeVoidAsync("removeOperations", operationIds);
+  }
+
+  /// <summary>A per-device setting that is deliberately not synced, such as which person this phone belongs to.</summary>
+  public async Task<string?> GetSettingAsync(string key)
+  {
+    var module = await ModuleAsync();
+    return await module.InvokeAsync<string?>("getMeta", $"setting:{key}");
+  }
+
+  public async Task SetSettingAsync(string key, string? value)
+  {
+    var module = await ModuleAsync();
+    await module.InvokeVoidAsync("setMeta", $"setting:{key}", value);
   }
 
   public async Task<long> GetCursorAsync()

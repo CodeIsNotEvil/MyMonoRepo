@@ -11,17 +11,17 @@
 <section class="card">
     <p class="text-sm" style="margin-top:0;">
         Import a CSV export of your spending sheet. Only <strong>dates</strong> and <strong>amounts</strong>
-        are read: every filled amount cell becomes one trip, whichever column it is in. Bookings are
-        saved without a category at a store called <em>Imported</em>, so your dashboard totals match
-        the sheet.
+        are read: every filled amount cell becomes one trip. You then say <strong>which person each
+        amount column belongs to</strong>, so the balance between people is right. Bookings are saved
+        without a category at a store called <em>Imported</em>.
     </p>
 
     <label for="csv">CSV file</label>
     <InputFile id="csv" OnChange="OnFileChosenAsync" accept=".csv,.txt,text/csv" disabled="@_busy" />
 
     <p class="text-sm muted mb-0 mt-1">
-        Importing the same file again is safe: bookings already on this device are skipped, and ones
-        you deleted stay deleted.
+        Importing the same file again is safe: bookings already here are not duplicated (a re-import
+        with people chosen assigns them to bookings that had none), and ones you deleted stay deleted.
     </p>
 </section>
 
@@ -30,25 +30,68 @@
     <div class="alert alert-danger">@_error</div>
 }
 
-@if (_finishedCount is { } finished)
+@if (_result is { } result)
 {
     <div class="alert alert-info">
-        Imported <strong>@finished</strong> booking@(finished == 1 ? "" : "s").
-        They are saved on this device and upload to the server on the next sync.
+        @ResultText(result)
+        Changes are saved on this device and upload to the server on the next sync.
     </div>
 
     <div class="btn-row">
-        <button class="btn btn-primary" @onclick="@(() => Nav.NavigateTo(""))">See the dashboard</button>
-        <button class="btn btn-ghost" @onclick="@(() => Nav.NavigateTo("trips"))">Open trips</button>
+        <button class="btn btn-primary" @onclick="@(() => Nav.NavigateTo("balance"))">See the balance</button>
+        <button class="btn btn-ghost" @onclick="@(() => Nav.NavigateTo(""))">Dashboard</button>
+        <button class="btn btn-ghost" @onclick="@(() => Nav.NavigateTo("trips"))">Trips</button>
     </div>
 }
 else if (_parsed is not null && _plan is not null)
 {
+    <section class="card">
+        <div class="card-header"><h2>Who paid?</h2></div>
+        <p class="text-sm muted">
+            Each column of amounts belongs to one person. Pick who, or add them as a new person.
+        </p>
+
+        @foreach (var choice in _choices)
+        {
+            <div class="field" style="border-top:1px solid var(--border); padding-top:.75rem;">
+                <div style="display:flex; justify-content:space-between; gap:.5rem; align-items:baseline;">
+                    <label for="col-@choice.Column.Index" style="margin:0; color:var(--text-primary);">
+                        Column “@choice.Column.Header”
+                    </label>
+                    <span class="text-sm muted nowrap">
+                        @choice.Column.BookingCount booking@(choice.Column.BookingCount == 1 ? "" : "s") · @Money.Format(choice.Column.Total, Currency)
+                    </span>
+                </div>
+
+                <select id="col-@choice.Column.Index" class="mt-1" value="@choice.Selection"
+                        @onchange="e => OnSelectionChangedAsync(choice, e)">
+                    <option value="">Nobody (leave unassigned)</option>
+                    @foreach (var member in _members)
+                    {
+                        <option value="@($"m:{member.Id}")">@member.DisplayName</option>
+                    }
+                    <option value="new">New person…</option>
+                </select>
+
+                @if (choice.Selection == NewPerson)
+                {
+                    <input class="mt-1" placeholder="Name" aria-label="@($"Name of the new person for column {choice.Column.Header}")"
+                           value="@choice.NewName" @onchange="e => OnNameChangedAsync(choice, e)" maxlength="120" />
+
+                    @if (string.IsNullOrWhiteSpace(choice.NewName))
+                    {
+                        <div class="validation-message">Enter a name.</div>
+                    }
+                }
+            </div>
+        }
+    </section>
+
     <div class="tiles">
         <div class="tile">
             <div class="tile-label">Found</div>
             <div class="tile-value">@_parsed.Bookings.Count</div>
-            <div class="tile-note">in @_fileName</div>
+            <div class="tile-note">@Money.Format(_parsed.Bookings.Sum(b => b.Amount), Currency) in @_fileName</div>
         </div>
         <div class="tile">
             <div class="tile-label">New</div>
@@ -56,16 +99,24 @@ else if (_parsed is not null && _plan is not null)
             <div class="tile-note">@NewRange</div>
         </div>
         <div class="tile">
-            <div class="tile-label">Already here</div>
+            <div class="tile-label">Assign person</div>
+            <div class="tile-value">@_plan.PayerUpdates.Count</div>
+            <div class="tile-note">already here, no payer yet</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">Unchanged</div>
             <div class="tile-value">@_plan.AlreadyImported</div>
             <div class="tile-note">will be skipped</div>
         </div>
-        <div class="tile">
-            <div class="tile-label">New total</div>
-            <div class="tile-value">@Money.Format(NewTotal, _plan.Household.CurrencyCode)</div>
-            <div class="tile-note">to be added</div>
-        </div>
     </div>
+
+    @if (_plan.NewMembers.Count > 0)
+    {
+        <div class="alert alert-info">
+            Adds @(_plan.NewMembers.Count == 1 ? "this person" : "these people"):
+            <strong>@string.Join(", ", _plan.NewMembers.Select(m => m.DisplayName))</strong>.
+        </div>
+    }
 
     @if (_parsed.DateOutliers.Count > 0)
     {
@@ -76,7 +127,7 @@ else if (_parsed is not null && _plan is not null)
             <ul style="margin:.4rem 0 .4rem 1.1rem; padding:0;">
                 @foreach (var outlier in _parsed.DateOutliers)
                 {
-                    <li>Line @outlier.SourceLine: @outlier.Date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) · @Money.Format(outlier.Amount, _plan.Household.CurrencyCode)</li>
+                    <li>Line @outlier.SourceLine: @outlier.Date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) · @Money.Format(outlier.Amount, Currency)</li>
                 }
             </ul>
             Best fixed in the sheet <em>before</em> importing: a corrected row would come in as a
@@ -88,7 +139,7 @@ else if (_parsed is not null && _plan is not null)
     {
         <div class="alert alert-info">
             @NegativeCount booking@(NegativeCount == 1 ? " is" : "s are") negative (a refund or a
-            correction). @(NegativeCount == 1 ? "It" : "They") will lower your spend.
+            correction). @(NegativeCount == 1 ? "It" : "They") will lower @(NegativeCount == 1 ? "that person's" : "their") paid amount.
         </div>
     }
 
@@ -122,15 +173,15 @@ else if (_parsed is not null && _plan is not null)
         </section>
     }
 
-    @if (_plan.NewTrips.Count == 0)
+    @if (!_plan.HasChanges)
     {
-        <div class="alert alert-info">Nothing new to import from this file.</div>
+        <div class="alert alert-info">Nothing to change: everything in this file is already here.</div>
     }
     else
     {
         <div class="btn-row">
-            <button class="btn btn-primary" @onclick="ImportAsync" disabled="@_busy">
-                Import @_plan.NewTrips.Count booking@(_plan.NewTrips.Count == 1 ? "" : "s")
+            <button class="btn btn-primary" @onclick="ImportAsync" disabled="@(_busy || HasInvalidChoice)">
+                @ImportButtonLabel
             </button>
         </div>
     }
@@ -145,30 +196,81 @@ else if (_noHousehold)
 @code {
   private const int MaxFileBytes = 5 * 1024 * 1024;
   private const int MaxSkippedShown = 10;
+  private const string NewPerson = "new";
+
+  private sealed class ColumnChoice
+  {
+    public required CsvAmountColumn Column { get; init; }
+
+    /// <summary>"" for nobody, "new" for a new person, or "m:&lt;id&gt;" for an existing one.</summary>
+    public string Selection { get; set; } = string.Empty;
+
+    public string NewName { get; set; } = string.Empty;
+  }
 
   private CsvParseResult? _parsed;
   private ImportPlan? _plan;
+  private List<ColumnChoice> _choices = [];
+  private List<Member> _members = [];
   private string _fileName = string.Empty;
   private string? _error;
   private bool _busy;
   private bool _noHousehold;
-  private int? _finishedCount;
+  private ImportResult? _result;
+
+  private string Currency => _plan?.Household.CurrencyCode ?? "EUR";
 
   private int NegativeCount => _parsed?.Bookings.Count(b => b.Amount < 0m) ?? 0;
 
-  private decimal NewTotal => _plan?.NewTrips.Sum(t => t.TotalAmount) ?? 0m;
+  private bool HasInvalidChoice =>
+    _choices.Any(c => c.Selection == NewPerson && string.IsNullOrWhiteSpace(c.NewName));
 
   private string NewRange => _plan is { NewTrips.Count: > 0 }
     ? $"{_plan.NewTrips.Min(t => t.PurchasedOn):MMM yyyy} – {_plan.NewTrips.Max(t => t.PurchasedOn):MMM yyyy}"
     : "nothing new";
 
+  private string ImportButtonLabel => _plan switch
+  {
+    { NewTrips.Count: > 0, PayerUpdates.Count: > 0 } =>
+      $"Import {_plan.NewTrips.Count} new, assign {_plan.PayerUpdates.Count}",
+    { NewTrips.Count: > 0 } =>
+      $"Import {_plan.NewTrips.Count} booking{(_plan.NewTrips.Count == 1 ? "" : "s")}",
+    { PayerUpdates.Count: > 0 } =>
+      $"Assign people to {_plan.PayerUpdates.Count} booking{(_plan.PayerUpdates.Count == 1 ? "" : "s")}",
+    _ => "Add people",
+  };
+
+  private static string ResultText(ImportResult result)
+  {
+    var parts = new List<string>();
+
+    if (result.NewTrips > 0)
+    {
+      parts.Add($"imported {result.NewTrips} new booking{(result.NewTrips == 1 ? "" : "s")}");
+    }
+
+    if (result.UpdatedTrips > 0)
+    {
+      parts.Add($"assigned a person to {result.UpdatedTrips} existing booking{(result.UpdatedTrips == 1 ? "" : "s")}");
+    }
+
+    if (result.NewMembers > 0)
+    {
+      parts.Add($"added {result.NewMembers} {(result.NewMembers == 1 ? "person" : "people")}");
+    }
+
+    var text = string.Join(", ", parts);
+    return char.ToUpperInvariant(text[0]) + text[1..] + ".";
+  }
+
   private async Task OnFileChosenAsync(InputFileChangeEventArgs e)
   {
     _parsed = null;
     _plan = null;
+    _choices = [];
     _error = null;
     _noHousehold = false;
-    _finishedCount = null;
+    _result = null;
     _busy = true;
 
     try
@@ -190,16 +292,17 @@ else if (_noHousehold)
         return;
       }
 
-      var plan = await Data.PlanImportAsync(parsed.Bookings);
-
-      if (plan is null)
+      if (await Data.GetHouseholdAsync() is null)
       {
         _noHousehold = true;
         return;
       }
 
+      _members = await Data.GetMembersAsync();
+      _choices = parsed.Columns.Select(DefaultChoice).ToList();
       _parsed = parsed;
-      _plan = plan;
+
+      await RebuildPlanAsync();
     }
     catch (IOException)
     {
@@ -215,6 +318,77 @@ else if (_noHousehold)
     }
   }
 
+  /// <summary>
+  /// A column headed with someone's name is assumed to be that person: an existing one if the name
+  /// matches, otherwise a new one. A column with no usable header starts out unassigned.
+  /// </summary>
+  private ColumnChoice DefaultChoice(CsvAmountColumn column)
+  {
+    var choice = new ColumnChoice { Column = column };
+
+    if (column.Header.StartsWith("Column ", StringComparison.Ordinal))
+    {
+      return choice;
+    }
+
+    var match = _members.FirstOrDefault(m =>
+      string.Equals(m.DisplayName, column.Header, StringComparison.CurrentCultureIgnoreCase));
+
+    if (match is not null)
+    {
+      choice.Selection = $"m:{match.Id}";
+    }
+    else
+    {
+      choice.Selection = NewPerson;
+      choice.NewName = column.Header;
+    }
+
+    return choice;
+  }
+
+  private async Task OnSelectionChangedAsync(ColumnChoice choice, ChangeEventArgs e)
+  {
+    choice.Selection = e.Value?.ToString() ?? string.Empty;
+
+    if (choice.Selection == NewPerson && string.IsNullOrWhiteSpace(choice.NewName)
+      && !choice.Column.Header.StartsWith("Column ", StringComparison.Ordinal))
+    {
+      choice.NewName = choice.Column.Header;
+    }
+
+    await RebuildPlanAsync();
+  }
+
+  private async Task OnNameChangedAsync(ColumnChoice choice, ChangeEventArgs e)
+  {
+    choice.NewName = e.Value?.ToString() ?? string.Empty;
+    await RebuildPlanAsync();
+  }
+
+  private async Task RebuildPlanAsync()
+  {
+    if (_parsed is null)
+    {
+      return;
+    }
+
+    _plan = await Data.PlanImportAsync(_parsed.Bookings, _choices.Select(ToAssignment).ToList());
+  }
+
+  private static ColumnAssignment ToAssignment(ColumnChoice choice)
+  {
+    if (choice.Selection.StartsWith("m:", StringComparison.Ordinal)
+      && Guid.TryParse(choice.Selection.AsSpan(2), out var memberId))
+    {
+      return new ColumnAssignment(choice.Column.Index, memberId, null);
+    }
+
+    return choice.Selection == NewPerson
+      ? new ColumnAssignment(choice.Column.Index, null, choice.NewName)
+      : new ColumnAssignment(choice.Column.Index, null, null);
+  }
+
   private async Task ImportAsync()
   {
     if (_plan is null)
@@ -227,9 +401,10 @@ else if (_noHousehold)
 
     try
     {
-      _finishedCount = await Data.ImportAsync(_plan);
+      _result = await Data.ImportAsync(_plan);
       _parsed = null;
       _plan = null;
+      _choices = [];
     }
     catch (Exception ex)
     {

@@ -13,6 +13,7 @@
     SyncStatus.Syncing => "Syncing",
     SyncStatus.Offline => Sync.PendingCount > 0 ? $"Offline · {Sync.PendingCount}" : "Offline",
     SyncStatus.Failed => "Sync error",
+    SyncStatus.ServerReset => "Server reset",
     _ => Sync.PendingCount > 0 ? $"Pending {Sync.PendingCount}" : "Synced",
   };
 
@@ -20,6 +21,7 @@
   {
     SyncStatus.Offline => "badge-warning",
     SyncStatus.Failed => "badge-critical",
+    SyncStatus.ServerReset => "badge-critical",
     _ => Sync.PendingCount > 0 ? "badge-warning" : "badge-good",
   };
 

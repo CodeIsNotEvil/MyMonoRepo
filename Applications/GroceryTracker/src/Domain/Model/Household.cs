@@ -36,4 +36,7 @@ public sealed class Household : ISyncEntity
 
   [JsonIgnore]
   public ICollection<ShoppingTrip> Trips { get; init; } = new List<ShoppingTrip>();
+
+  [JsonIgnore]
+  public ICollection<Settlement> Settlements { get; init; } = new List<Settlement>();
 }

@@ -25,6 +25,7 @@ public class GroceryTrackerDbContext : DbContext
   public DbSet<Category> Categories { get; set; } = null!;
   public DbSet<ShoppingTrip> Trips { get; set; } = null!;
   public DbSet<ExpenseItem> Items { get; set; } = null!;
+  public DbSet<Settlement> Settlements { get; set; } = null!;
   public DbSet<SyncCounter> SyncCounters { get; set; } = null!;
   public DbSet<AppliedSyncOperation> AppliedSyncOperations { get; set; } = null!;
 

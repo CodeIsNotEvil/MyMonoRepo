@@ -313,4 +313,133 @@ public class SyncServiceTests
     Assert.Equal(stamps.OrderBy(s => s), stamps);
     Assert.Equal(stamps.Distinct().Count(), stamps.Count);
   }
+
+  [Fact]
+  public async Task A_cursor_ahead_of_the_server_means_it_was_reset_and_nothing_is_applied()
+  {
+    await using var ctx = await SyncTestContext.CreateAsync();
+    var household = await ctx.SeedHouseholdAsync();
+    var real = (await ctx.SyncAsync(0)).Cursor;
+
+    var store = new Store { Name = "From the old database", HouseholdId = household.Id };
+    var response = await ctx.SyncAsync(real + 500, ctx.Upsert(store, SyncEntityType.Store));
+
+    Assert.True(response.ServerReset);
+    Assert.Empty(response.AppliedOperationIds);
+    Assert.Equal(0, response.Payload.Count);
+
+    // The queued change must not have been applied, or rejected and thereby dropped from the outbox.
+    await using var db = ctx.CreateDbContext();
+    Assert.Empty(await db.Stores.ToListAsync());
+  }
+
+  [Fact]
+  public async Task A_normal_cursor_is_never_mistaken_for_a_reset()
+  {
+    await using var ctx = await SyncTestContext.CreateAsync();
+    await ctx.SeedHouseholdAsync();
+
+    var first = await ctx.SyncAsync(0);
+    var second = await ctx.SyncAsync(first.Cursor);
+
+    Assert.False(first.ServerReset);
+    Assert.False(second.ServerReset);
+  }
+
+  [Fact]
+  public async Task A_settlement_is_persisted_and_echoed_with_a_server_stamp()
+  {
+    await using var ctx = await SyncTestContext.CreateAsync();
+    var household = await ctx.SeedHouseholdAsync();
+    var cursor = (await ctx.SyncAsync(0)).Cursor;
+
+    var anna = new Member { DisplayName = "Anna", HouseholdId = household.Id };
+    var ben = new Member { DisplayName = "Ben", HouseholdId = household.Id };
+    var transfer = new Settlement
+    {
+      FromMemberId = ben.Id,
+      ToMemberId = anna.Id,
+      Amount = 30m,
+      Date = new DateOnly(2026, 3, 9),
+      HouseholdId = household.Id,
+    };
+
+    // Settlement listed first: the engine still has to create the members it points at before it.
+    var response = await ctx.SyncAsync(
+      cursor,
+      ctx.Upsert(transfer, SyncEntityType.Settlement),
+      ctx.Upsert(anna, SyncEntityType.Member),
+      ctx.Upsert(ben, SyncEntityType.Member));
+
+    Assert.Empty(response.Conflicts);
+
+    var echoed = Assert.Single(response.Payload.Settlements);
+    Assert.Equal(30m, echoed.Amount);
+    Assert.Equal(ben.Id, echoed.FromMemberId);
+    Assert.True(echoed.SyncStamp > cursor);
+  }
+
+  [Fact]
+  public async Task A_settlement_between_the_same_person_or_an_unknown_one_is_rejected()
+  {
+    await using var ctx = await SyncTestContext.CreateAsync();
+    var household = await ctx.SeedHouseholdAsync();
+    var cursor = (await ctx.SyncAsync(0)).Cursor;
+
+    var anna = new Member { DisplayName = "Anna", HouseholdId = household.Id };
+    var memberSync = await ctx.SyncAsync(cursor, ctx.Upsert(anna, SyncEntityType.Member));
+
+    var toSelf = new Settlement { FromMemberId = anna.Id, ToMemberId = anna.Id, Amount = 5m, HouseholdId = household.Id };
+    var toStranger = new Settlement { FromMemberId = anna.Id, ToMemberId = Guid.NewGuid(), Amount = 5m, HouseholdId = household.Id };
+
+    var response = await ctx.SyncAsync(
+      memberSync.Cursor,
+      ctx.Upsert(toSelf, SyncEntityType.Settlement),
+      ctx.Upsert(toStranger, SyncEntityType.Settlement));
+
+    Assert.Equal(2, response.Conflicts.Count);
+    Assert.All(response.Conflicts, c => Assert.Equal(ConflictOutcome.Rejected, c.Outcome));
+    Assert.Empty(response.Payload.Settlements);
+  }
+
+  [Fact]
+  public async Task Assigning_a_payer_to_an_existing_trip_is_an_ordinary_conflict_free_update()
+  {
+    await using var ctx = await SyncTestContext.CreateAsync();
+    var household = await ctx.SeedHouseholdAsync();
+    var cursor = (await ctx.SyncAsync(0)).Cursor;
+
+    var store = new Store { Name = "Imported", HouseholdId = household.Id };
+    var member = new Member { DisplayName = "Anna", HouseholdId = household.Id };
+    var trip = new ShoppingTrip
+    {
+      StoreId = store.Id,
+      HouseholdId = household.Id,
+      TotalAmount = 20m,
+      PurchasedOn = new DateOnly(2026, 3, 4),
+    };
+
+    var created = await ctx.SyncAsync(
+      cursor,
+      ctx.Upsert(store, SyncEntityType.Store),
+      ctx.Upsert(member, SyncEntityType.Member),
+      ctx.Upsert(trip, SyncEntityType.ShoppingTrip));
+    var stamp = created.Payload.Trips.Single().SyncStamp;
+
+    // What re-importing a CSV with people assigned does to trips that came in without a payer.
+    ctx.Clock.Advance(TimeSpan.FromMinutes(1));
+    var assigned = new ShoppingTrip
+    {
+      Id = trip.Id,
+      StoreId = store.Id,
+      HouseholdId = household.Id,
+      TotalAmount = 20m,
+      PurchasedOn = new DateOnly(2026, 3, 4),
+      PaidByMemberId = member.Id,
+    };
+    var response = await ctx.SyncAsync(created.Cursor, ctx.Upsert(assigned, SyncEntityType.ShoppingTrip, stamp));
+
+    Assert.Empty(response.Conflicts);
+    Assert.Equal(member.Id, Assert.Single(response.Payload.Trips).PaidByMemberId);
+  }
 }

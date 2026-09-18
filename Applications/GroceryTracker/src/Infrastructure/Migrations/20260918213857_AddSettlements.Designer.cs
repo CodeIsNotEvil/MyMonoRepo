@@ -3,6 +3,7 @@ using System;
 using GroceryTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GroceryTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(GroceryTrackerDbContext))]
-    partial class GroceryTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260918213857_AddSettlements")]
+    partial class AddSettlements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

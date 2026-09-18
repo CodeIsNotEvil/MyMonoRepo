@@ -260,6 +260,10 @@ a:hover { text-decoration: underline; }
 .trend-up { color: var(--critical); }
 .trend-down { color: var(--good); }
 
+/* Who is owed and who owes. Always paired with words ("is owed" / "owes"), never colour alone. */
+.balance-pos { color: var(--good); }
+.balance-neg { color: var(--critical); }
+
 /* ---------- Forms & buttons ---------- */
 
 label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .25rem; color: var(--text-secondary); }

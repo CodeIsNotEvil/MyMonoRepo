@@ -49,15 +49,22 @@ public sealed record SyncPayload(
   IReadOnlyList<Store> Stores,
   IReadOnlyList<Category> Categories,
   IReadOnlyList<ShoppingTrip> Trips,
-  IReadOnlyList<ExpenseItem> Items)
+  IReadOnlyList<ExpenseItem> Items,
+  IReadOnlyList<Settlement> Settlements)
 {
-  public static SyncPayload Empty { get; } = new([], [], [], [], [], []);
+  public static SyncPayload Empty { get; } = new([], [], [], [], [], [], []);
 
   public int Count => Households.Count + Members.Count + Stores.Count
-    + Categories.Count + Trips.Count + Items.Count;
+    + Categories.Count + Trips.Count + Items.Count + Settlements.Count;
 }
 
 /// <param name="Cursor">The cursor the device should store and send next time.</param>
+/// <param name="ServerReset">
+/// True when the device's cursor is ahead of anything this server has ever issued, which means the
+/// server's database was wiped or replaced since the device last synced. Nothing in the request was
+/// applied and nothing is returned: the device must not keep syncing against data that no longer
+/// exists there.
+/// </param>
 /// <param name="AppliedOperationIds">
 /// Operations the device may now drop from its outbox. An operation rejected by a conflict is also
 /// listed here, because retrying it would only lose again; the device reloads the server copy instead.
@@ -67,4 +74,5 @@ public sealed record SyncResponse(
   IReadOnlyList<Guid> AppliedOperationIds,
   IReadOnlyList<SyncConflict> Conflicts,
   SyncPayload Payload,
-  DateTimeOffset ServerTimeUtc);
+  DateTimeOffset ServerTimeUtc,
+  bool ServerReset = false);
