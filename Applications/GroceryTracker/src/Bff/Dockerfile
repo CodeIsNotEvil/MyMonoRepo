@@ -25,8 +25,12 @@ WORKDIR /app
 # The runtime image ships neither wget nor curl, so the compose healthcheck below has nothing to
 # call the /health endpoint with. curl is the smallest fix; installed and its apt cache dropped in
 # the same layer so it doesn't linger in the image.
+#
+# libgssapi-krb5-2 is what Npgsql probes for to negotiate GSSAPI encryption on every connection;
+# without it, each connection attempt logs a scary-looking "Cannot load library ... Error:" line
+# even when the connection succeeds, which is a red herring next to any *real* connection failure.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl libgssapi-krb5-2 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV ASPNETCORE_URLS=http://+:5000 \

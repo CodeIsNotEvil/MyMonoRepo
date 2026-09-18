@@ -173,8 +173,8 @@ podman compose up -d --build     # rebuild after pulling code changes
 
 ### What had to change to make this Podman-clean
 
-Two bugs surfaced while verifying this, both of which would have broken **plain Docker too** — they
-were never Podman-specific, just never exercised until now:
+A few bugs surfaced while verifying this, all of which would have broken **plain Docker too** —
+none were actually Podman-specific, just never exercised until now:
 
 - **No `.dockerignore`.** `COPY src/ src/` in every Dockerfile was pulling in whatever `bin/`/`obj/`
   happened to exist locally from running `dotnet build` on the host. Those directories embed
@@ -185,6 +185,20 @@ were never Podman-specific, just never exercised until now:
 - **The BFF's healthcheck used `wget`.** `mcr.microsoft.com/dotnet/aspnet:10.0` ships neither `wget`
   nor `curl`, so the healthcheck could never succeed. Fixed by installing `curl` in that image's
   final layer and switching the compose healthcheck to use it.
+- **nginx cached `bff`'s IP forever.** `proxy_pass http://bff:5000;` (a literal hostname) resolves
+  once, when nginx starts, and holds onto that address for as long as the container runs. Rebuild or
+  recreate just the `bff` container — which is exactly what happens on the Pi every time you update
+  only the backend — and it gets a new internal IP that `web` never learns about; every request
+  after that hangs until `web` itself is restarted too. Fixed by turning on the base nginx image's
+  own resolver detection (`NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1`) and routing `proxy_pass` through a
+  variable, which together make nginx re-resolve `bff` instead of caching it — verified by recreating
+  `bff` alone and confirming `web` picked up its new address with no restart of its own.
+- Also, unrelated to Podman: **every `wget`/curl-less container that talks to Postgres logged
+  `Cannot load library libgssapi_krb5.so.2`** on every single connection attempt, success or not —
+  Npgsql probing for a Kerberos library the slim runtime images don't ship, then quietly falling back
+  to normal password/SCRAM auth. Harmless, but it looks exactly like a fatal error and is a red
+  herring next to a *real* connection failure. Installed `libgssapi-krb5-2` in both the BFF and
+  migration-runner images to make the logs trustworthy again.
 
 ## Deploying to the Raspberry Pi
 
@@ -304,7 +318,9 @@ docker compose up -d --build
 ```
 
 Existing data survives: the Postgres volume is untouched by a rebuild, and EF Core migrations run
-automatically via the `migration-runner` service on every `up`.
+automatically via the `migration-runner` service on every `up`. This also only recreates the
+containers whose image actually changed — usually just `bff` — and `web` correctly picks up its new
+address without needing a restart of its own (see the nginx resolver note above).
 
 ### Native install, without containers
 

@@ -12,5 +12,14 @@ RUN dotnet publish src/MigrationRunner/GroceryTracker.MigrationRunner.csproj -c 
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
+
+# Npgsql probes for this at connection time to negotiate GSSAPI encryption; the slim runtime image
+# doesn't ship it, so every run logged a scary-looking "Cannot load library ... Error:" line even on
+# success, as Npgsql silently fell back to normal password/SCRAM auth. Installing it removes the
+# noise rather than leaving a red herring next to any *real* connection failure.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "GroceryTracker.MigrationRunner.dll"]

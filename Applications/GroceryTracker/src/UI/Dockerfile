@@ -20,6 +20,15 @@ RUN dotnet publish src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.cspr
 
 FROM nginx:alpine
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
-COPY deploy/nginx/grocerytracker.container.conf /etc/nginx/conf.d/default.conf
+
+# A .template file in /etc/nginx/templates/ is rendered to /etc/nginx/conf.d/ by the base image's
+# own entrypoint (via envsubst) on every container start, which is what lets ${NGINX_LOCAL_RESOLVERS}
+# below pick up this container's *current* DNS resolver rather than a value baked in at build time.
+COPY deploy/nginx/grocerytracker.container.conf.template /etc/nginx/templates/default.conf.template
+
+# Turns on the base image's own local-resolver detection (a stock entrypoint script, gated behind
+# this var), which the template's `resolver` directive needs so nginx re-resolves the `bff`
+# container's address instead of caching whatever it was on nginx's first request to it.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 
 EXPOSE 80
