@@ -168,7 +168,9 @@ public static class SpendAnalyzer
       }
 
       var unallocated = trip.TotalAmount - (itemsTotal * scale);
-      if (unallocated > 0m)
+      // Not just > 0: a refund is a trip with a negative total and no items, and dropping its
+      // remainder would leave the category slices short of the headline total.
+      if (unallocated != 0m)
       {
         uncategorised += unallocated;
       }
@@ -190,10 +192,15 @@ public static class SpendAnalyzer
       })
       .ToList();
 
-    if (uncategorised != 0m)
+    var uncategorisedAmount = decimal.Round(uncategorised, 2, MidpointRounding.AwayFromZero);
+    if (uncategorisedAmount != 0m)
     {
-      var amount = decimal.Round(uncategorised, 2, MidpointRounding.AwayFromZero);
-      slices.Add(new CategorySlice(null, UncategorisedName, UncategorisedColor, amount, Share(amount, totalSpend)));
+      slices.Add(new CategorySlice(
+        null,
+        UncategorisedName,
+        UncategorisedColor,
+        uncategorisedAmount,
+        Share(uncategorisedAmount, totalSpend)));
     }
 
     return slices

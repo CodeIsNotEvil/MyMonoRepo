@@ -2,10 +2,23 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using GroceryTracker.Contracts.Sync;
 using GroceryTracker.Domain.Analytics;
+using GroceryTracker.Domain.Import;
 using GroceryTracker.Domain.Model;
 using GroceryTracker.Domain.Sync;
 
 namespace GroceryTracker.UI.Blazor.Services;
+
+/// <summary>What an import would do, worked out before anything is written.</summary>
+/// <param name="NewTrips">Bookings not yet on this device, ready to be saved.</param>
+/// <param name="AlreadyImported">
+/// Bookings whose id already exists locally. This includes trips the user deleted afterwards, so a
+/// re-import does not resurrect them.
+/// </param>
+public sealed record ImportPlan(
+  Household Household,
+  Guid StoreId,
+  IReadOnlyList<ShoppingTrip> NewTrips,
+  int AlreadyImported);
 
 /// <summary>
 /// The only data API the pages use.
@@ -215,6 +228,82 @@ public sealed class GroceryDataService
       to,
       granularity,
       household?.CurrencyCode ?? "EUR");
+  }
+
+  private const string ImportStoreName = "Imported";
+  private const string ImportStoreKey = "csv-import-store";
+
+  /// <summary>
+  /// Works out which parsed bookings are new. Ids come from the booking's key, so importing the same
+  /// file again (or a longer export of the same sheet) only adds what is not here yet.
+  /// </summary>
+  /// <returns>Null until this device has synced a household to attach the trips to.</returns>
+  public async Task<ImportPlan?> PlanImportAsync(IReadOnlyList<ImportedBooking> bookings)
+  {
+    var household = await GetHouseholdAsync();
+    if (household is null)
+    {
+      return null;
+    }
+
+    var storeId = DeterministicGuid.Create(household.Id, ImportStoreKey);
+    var knownIds = (await _store.GetTripsAsync()).Select(t => t.Id).ToHashSet();
+
+    var fresh = new List<ShoppingTrip>();
+    var already = 0;
+
+    foreach (var booking in bookings)
+    {
+      var id = DeterministicGuid.Create(household.Id, booking.Key);
+
+      if (knownIds.Contains(id))
+      {
+        already++;
+        continue;
+      }
+
+      fresh.Add(new ShoppingTrip
+      {
+        Id = id,
+        PurchasedOn = booking.Date,
+        TotalAmount = booking.Amount,
+        StoreId = storeId,
+        HouseholdId = household.Id,
+      });
+    }
+
+    return new ImportPlan(household, storeId, fresh, already);
+  }
+
+  /// <summary>
+  /// Saves the planned trips through the normal outbox, so an import made offline uploads on the
+  /// next sync like any other edit. Bookings carry no store, so they share one "Imported" store.
+  /// </summary>
+  public async Task<int> ImportAsync(ImportPlan plan)
+  {
+    ArgumentNullException.ThrowIfNull(plan);
+
+    if (plan.NewTrips.Count == 0)
+    {
+      return 0;
+    }
+
+    var store = (await _store.GetStoresAsync()).FirstOrDefault(s => s.Id == plan.StoreId);
+
+    // Trips need a store to point at, so create it — or bring it back if it was removed.
+    if (store is null || store.IsDeleted)
+    {
+      store ??= new Store { Id = plan.StoreId, Name = ImportStoreName, HouseholdId = plan.Household.Id };
+      await UpsertAsync(Stores, store, SyncEntityType.Store);
+    }
+
+    foreach (var trip in plan.NewTrips)
+    {
+      await UpsertAsync(Trips, trip, SyncEntityType.ShoppingTrip);
+    }
+
+    TriggerSync();
+    return plan.NewTrips.Count;
   }
 
   /// <summary>Drops the local cache so the next sync re-pulls everything from scratch.</summary>

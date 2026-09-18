@@ -127,8 +127,40 @@ dotnet run --project src/UI/GroceryTracker.UI.Blazor # :5173
 dotnet test
 ```
 
-Covers the analyzer's arithmetic, the sync engine's conflict/idempotency/ordering behaviour against
-a real relational database, the stamp allocation, and the chart geometry.
+Covers the analyzer's arithmetic, the CSV import parser, the sync engine's
+conflict/idempotency/ordering behaviour against a real relational database, the stamp allocation,
+and the chart geometry.
+
+On Arch/CachyOS the `Bff` project also needs the ASP.NET Core *targeting pack*, which is a separate
+package from the runtime. Without it the build stops with `NETSDK1226: Prune Package data not found`
+(the container builds are unaffected — the SDK image ships it):
+
+```fish
+sudo pacman -S aspnet-targeting-pack
+```
+
+## Importing bookings from a spreadsheet
+
+**Manage → Import bookings from CSV** brings in past spending from a CSV export of a sheet. It runs
+in the browser, so it works offline: the trips are written to the device and go up on the next sync
+like any other edit.
+
+- **Only dates and amounts are read.** Nothing depends on column names or order — a cell that looks
+  like a date is the date, a cell that looks like an amount is an amount. A sheet with one amount
+  column per person imports the same as one with a single column, and every filled amount cell
+  becomes its own trip (two people shopping on one day is two receipts). Who paid is ignored.
+- **Formats.** `81,50 €`, `1.234,56`, `1,234.56`, `-9,50 €`; dates as `04.04.2024`, `4.4.24` or
+  `2024-04-04`; comma- or semicolon-separated, with or without a BOM.
+- **Everything lands uncategorised** at a store called *Imported* (rename it under Manage), so the
+  dashboard totals match the sheet exactly.
+- **Re-importing is safe.** A booking's id is derived from its date, amount and which repeat of that
+  pair it is, so importing the same file again — or a longer export of the same sheet — only adds
+  rows that are not here yet, and trips you deleted afterwards are not resurrected.
+- **You see what will happen first**: how many bookings are new, the total, any rows that could not
+  be read (with line numbers), refunds (negative amounts, which lower your spend), and dates that sit
+  far from every other booking, which is nearly always a typo like 2015 for 2025. Fix those in the
+  sheet *before* importing — a corrected row would arrive as a new booking and leave the wrong one
+  behind.
 
 ## Running the full stack locally with Podman
 

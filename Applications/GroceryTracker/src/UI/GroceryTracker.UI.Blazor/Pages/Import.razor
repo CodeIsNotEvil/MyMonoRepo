@@ -1,0 +1,243 @@
+@page "/import"
+@using System.Text
+@using GroceryTracker.Domain.Import
+@inject GroceryDataService Data
+@inject NavigationManager Nav
+
+<PageTitle>Import · Grocery Tracker</PageTitle>
+
+<h1>Import bookings</h1>
+
+<section class="card">
+    <p class="text-sm" style="margin-top:0;">
+        Import a CSV export of your spending sheet. Only <strong>dates</strong> and <strong>amounts</strong>
+        are read: every filled amount cell becomes one trip, whichever column it is in. Bookings are
+        saved without a category at a store called <em>Imported</em>, so your dashboard totals match
+        the sheet.
+    </p>
+
+    <label for="csv">CSV file</label>
+    <InputFile id="csv" OnChange="OnFileChosenAsync" accept=".csv,.txt,text/csv" disabled="@_busy" />
+
+    <p class="text-sm muted mb-0 mt-1">
+        Importing the same file again is safe: bookings already on this device are skipped, and ones
+        you deleted stay deleted.
+    </p>
+</section>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+@if (_finishedCount is { } finished)
+{
+    <div class="alert alert-info">
+        Imported <strong>@finished</strong> booking@(finished == 1 ? "" : "s").
+        They are saved on this device and upload to the server on the next sync.
+    </div>
+
+    <div class="btn-row">
+        <button class="btn btn-primary" @onclick="@(() => Nav.NavigateTo(""))">See the dashboard</button>
+        <button class="btn btn-ghost" @onclick="@(() => Nav.NavigateTo("trips"))">Open trips</button>
+    </div>
+}
+else if (_parsed is not null && _plan is not null)
+{
+    <div class="tiles">
+        <div class="tile">
+            <div class="tile-label">Found</div>
+            <div class="tile-value">@_parsed.Bookings.Count</div>
+            <div class="tile-note">in @_fileName</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">New</div>
+            <div class="tile-value">@_plan.NewTrips.Count</div>
+            <div class="tile-note">@NewRange</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">Already here</div>
+            <div class="tile-value">@_plan.AlreadyImported</div>
+            <div class="tile-note">will be skipped</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">New total</div>
+            <div class="tile-value">@Money.Format(NewTotal, _plan.Household.CurrencyCode)</div>
+            <div class="tile-note">to be added</div>
+        </div>
+    </div>
+
+    @if (_parsed.DateOutliers.Count > 0)
+    {
+        <div class="alert alert-warning">
+            <strong>@_parsed.DateOutliers.Count date@(_parsed.DateOutliers.Count == 1 ? " looks" : "s look") wrong.</strong>
+            @(_parsed.DateOutliers.Count == 1 ? "It sits" : "They sit") far from every other booking,
+            which is usually a typo (2015 instead of 2025).
+            <ul style="margin:.4rem 0 .4rem 1.1rem; padding:0;">
+                @foreach (var outlier in _parsed.DateOutliers)
+                {
+                    <li>Line @outlier.SourceLine: @outlier.Date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) · @Money.Format(outlier.Amount, _plan.Household.CurrencyCode)</li>
+                }
+            </ul>
+            Best fixed in the sheet <em>before</em> importing: a corrected row would come in as a
+            new booking and leave the wrong one behind. You can still edit the trip afterwards.
+        </div>
+    }
+
+    @if (NegativeCount > 0)
+    {
+        <div class="alert alert-info">
+            @NegativeCount booking@(NegativeCount == 1 ? " is" : "s are") negative (a refund or a
+            correction). @(NegativeCount == 1 ? "It" : "They") will lower your spend.
+        </div>
+    }
+
+    @if (_parsed.Skipped.Count > 0)
+    {
+        <section class="card">
+            <div class="card-header">
+                <h2>Skipped rows</h2>
+                <span class="spacer badge badge-warning">@_parsed.Skipped.Count</span>
+            </div>
+            <p class="text-sm muted">These rows had no usable date or amount, so nothing was imported from them.</p>
+            <table class="data">
+                <thead>
+                    <tr><th scope="col">Line</th><th scope="col">Why</th><th scope="col">Row</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _parsed.Skipped.Take(MaxSkippedShown))
+                    {
+                        <tr>
+                            <td>@row.Line</td>
+                            <td>@row.Reason</td>
+                            <td class="muted">@row.Raw</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (_parsed.Skipped.Count > MaxSkippedShown)
+            {
+                <p class="text-sm muted mt-1 mb-0">…and @(_parsed.Skipped.Count - MaxSkippedShown) more.</p>
+            }
+        </section>
+    }
+
+    @if (_plan.NewTrips.Count == 0)
+    {
+        <div class="alert alert-info">Nothing new to import from this file.</div>
+    }
+    else
+    {
+        <div class="btn-row">
+            <button class="btn btn-primary" @onclick="ImportAsync" disabled="@_busy">
+                Import @_plan.NewTrips.Count booking@(_plan.NewTrips.Count == 1 ? "" : "s")
+            </button>
+        </div>
+    }
+}
+else if (_noHousehold)
+{
+    <div class="alert alert-info">
+        This device has not synced yet. Connect to your server once, then you can import.
+    </div>
+}
+
+@code {
+  private const int MaxFileBytes = 5 * 1024 * 1024;
+  private const int MaxSkippedShown = 10;
+
+  private CsvParseResult? _parsed;
+  private ImportPlan? _plan;
+  private string _fileName = string.Empty;
+  private string? _error;
+  private bool _busy;
+  private bool _noHousehold;
+  private int? _finishedCount;
+
+  private int NegativeCount => _parsed?.Bookings.Count(b => b.Amount < 0m) ?? 0;
+
+  private decimal NewTotal => _plan?.NewTrips.Sum(t => t.TotalAmount) ?? 0m;
+
+  private string NewRange => _plan is { NewTrips.Count: > 0 }
+    ? $"{_plan.NewTrips.Min(t => t.PurchasedOn):MMM yyyy} – {_plan.NewTrips.Max(t => t.PurchasedOn):MMM yyyy}"
+    : "nothing new";
+
+  private async Task OnFileChosenAsync(InputFileChangeEventArgs e)
+  {
+    _parsed = null;
+    _plan = null;
+    _error = null;
+    _noHousehold = false;
+    _finishedCount = null;
+    _busy = true;
+
+    try
+    {
+      var file = e.File;
+      _fileName = file.Name;
+
+      await using var stream = file.OpenReadStream(MaxFileBytes);
+      using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+      var text = await reader.ReadToEndAsync();
+
+      var parsed = GroceryCsvParser.Parse(text);
+
+      if (parsed.Bookings.Count == 0)
+      {
+        _error = parsed.Skipped.Count > 0
+          ? "No bookings could be read from this file. Each row needs a date (like 04.04.2024) and an amount (like 81,50 €)."
+          : "This file is empty.";
+        return;
+      }
+
+      var plan = await Data.PlanImportAsync(parsed.Bookings);
+
+      if (plan is null)
+      {
+        _noHousehold = true;
+        return;
+      }
+
+      _parsed = parsed;
+      _plan = plan;
+    }
+    catch (IOException)
+    {
+      _error = $"That file is larger than {MaxFileBytes / (1024 * 1024)} MB, which is far more than a spending sheet needs.";
+    }
+    catch (Exception ex)
+    {
+      _error = $"Could not read that file: {ex.Message}";
+    }
+    finally
+    {
+      _busy = false;
+    }
+  }
+
+  private async Task ImportAsync()
+  {
+    if (_plan is null)
+    {
+      return;
+    }
+
+    _busy = true;
+    _error = null;
+
+    try
+    {
+      _finishedCount = await Data.ImportAsync(_plan);
+      _parsed = null;
+      _plan = null;
+    }
+    catch (Exception ex)
+    {
+      _error = $"The import failed: {ex.Message}";
+    }
+    finally
+    {
+      _busy = false;
+    }
+  }
+}

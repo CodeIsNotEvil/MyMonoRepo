@@ -64,6 +64,26 @@ public class BarChartTests : BunitContext
   }
 
   [Fact]
+  public void Many_bars_drop_the_year_from_their_labels_so_they_fit_a_phone()
+  {
+    var many = Enumerable.Range(1, 12).Select(i => Bar($"Mon{i} 25", i * 10m)).ToList();
+
+    var component = Render<BarChart>(p => p.Add(c => c.Points, many));
+
+    // The visible label is the bare month; the full "Mon1 25" survives only in the hover title.
+    Assert.Contains(">Mon1<", component.Markup);
+    Assert.DoesNotContain(">Mon1 25<", component.Markup);
+  }
+
+  [Fact]
+  public void Few_bars_keep_the_full_label()
+  {
+    var component = Render<BarChart>(p => p.Add(c => c.Points, [Bar("Jan 26", 10m), Bar("Feb 26", 20m)]));
+
+    Assert.Contains("Jan 26<", component.Markup);
+  }
+
+  [Fact]
   public void An_empty_series_says_so_instead_of_drawing_an_empty_axis()
   {
     var component = Render<BarChart>(p => p.Add(c => c.Points, []));

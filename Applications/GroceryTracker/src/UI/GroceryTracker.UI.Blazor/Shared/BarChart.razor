@@ -25,13 +25,14 @@ else
     </svg>
 
     @* The values are spelled out here rather than only encoded by bar height, which is also what
-       satisfies the contrast relief rule for the paler category colours. *@
+       satisfies the contrast relief rule for the paler category colours. With many bars a column is
+       only ~30px wide, so the label drops its year and shrinks instead of truncating to "Oc…". *@
     <div style="display:grid; grid-template-columns:repeat(@Points.Count, minmax(0,1fr)); gap:0; margin-top:.35rem;">
         @foreach (var point in Points)
         {
-            <div style="text-align:center; min-width:0; padding:0 2px;">
-                <div style="font-size:.7rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@point.Label</div>
-                <div style="font-size:.75rem; font-weight:600; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@point.Display</div>
+            <div style="text-align:center; min-width:0; padding:0 1px;">
+                <div style="font-size:@(Crowded ? ".62rem" : ".7rem"); color:var(--text-muted); white-space:nowrap;">@ShortLabel(point.Label)</div>
+                <div style="font-size:@(Crowded ? ".6rem" : ".75rem"); font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap;">@point.Display</div>
             </div>
         }
     </div>
@@ -48,6 +49,14 @@ else
 
   [Parameter]
   public string AriaLabel { get; set; } = "Spend over time";
+
+  /// <summary>More than this many bars and the labels no longer fit at full size on a phone.</summary>
+  private const int CrowdedThreshold = 8;
+
+  private bool Crowded => Points.Count > CrowdedThreshold;
+
+  // "Oct 25" -> "Oct": the year is implied by the order once there are many bars.
+  private string ShortLabel(string label) => Crowded ? label.Split(' ')[0] : label;
 
   private const decimal Width = 240m;
   private const decimal PlotHeight = 56m;
