@@ -1,0 +1,23 @@
+# Without this, `COPY src/ src/` (or `COPY . .`) pulls in whatever bin/obj happen to exist on the
+# host from a local `dotnet build`/`dotnet test`. project.assets.json embeds absolute paths to the
+# host's NuGet global-packages folder (e.g. /home/<user>/.nuget/packages/...), which do not exist
+# inside the build container — so a container restore succeeds, then publish fails looking for a
+# package that "isn't there", even though it restored cleanly seconds earlier. This bites on any
+# machine that has ever run `dotnet build` outside a container, Docker or Podman alike.
+**/bin/
+**/obj/
+
+.git/
+.gitignore
+.dockerignore
+**/.vs/
+**/.vscode/
+**/*.user
+
+README.md
+*.slnx
+
+# Local secrets and dev overrides never belong in an image.
+.env
+**/appsettings.Development.json
+**/appsettings.*.local.json
