@@ -26,9 +26,17 @@ COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
 # below pick up this container's *current* DNS resolver rather than a value baked in at build time.
 COPY deploy/nginx/grocerytracker.container.conf.template /etc/nginx/templates/default.conf.template
 
+# The shared body of both server blocks, plus the HTTPS block and the script that enables it. The
+# TLS template stays out of /etc/nginx/templates on purpose: anything in there is rendered into
+# conf.d unconditionally, and an HTTPS block without a certificate stops nginx from starting.
+COPY deploy/nginx/app-common.conf /etc/nginx/grocerytracker/app-common.conf
+COPY deploy/nginx/tls-server.conf.template /etc/nginx/grocerytracker/tls-server.conf.template
+COPY deploy/nginx/30-grocerytracker-tls.sh /docker-entrypoint.d/30-grocerytracker-tls.sh
+RUN chmod +x /docker-entrypoint.d/30-grocerytracker-tls.sh
+
 # Turns on the base image's own local-resolver detection (a stock entrypoint script, gated behind
 # this var), which the template's `resolver` directive needs so nginx re-resolves the `api`
 # container's address instead of caching whatever it was on nginx's first request to it.
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 
-EXPOSE 80
+EXPOSE 80 443

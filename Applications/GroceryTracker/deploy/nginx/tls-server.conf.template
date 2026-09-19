@@ -1,0 +1,26 @@
+# The HTTPS server block, rendered into /etc/nginx/conf.d/ at container start *only if* a
+# certificate is mounted at /etc/nginx/certs. Without HTTPS an installed PWA cannot register its
+# service worker, so this is what makes the app usable offline on a phone. See deploy/https.md.
+
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+  server_name _;
+
+  # Same reason as in the HTTP block: re-resolve the api container instead of caching its address.
+  resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+
+  ssl_certificate     /etc/nginx/certs/grocerytracker.crt;
+  ssl_certificate_key /etc/nginx/certs/grocerytracker.key;
+
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+  ssl_session_cache shared:GroceryTrackerTLS:4m;
+  ssl_session_timeout 1h;
+
+  # Deliberately no HSTS: this certificate comes from a private CA on a home network, and pinning
+  # browsers to HTTPS for a host you might later serve over plain HTTP is a trap, not a safeguard.
+
+  include /etc/nginx/grocerytracker/app-common.conf;
+}

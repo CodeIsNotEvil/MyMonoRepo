@@ -76,6 +76,11 @@ services:
         condition: service_started
     ports:
       - "${WEB_PORT:-8080}:80"
+      # HTTPS, which an installed PWA needs before it will register a service worker. Serving it
+      # requires a certificate in deploy/certs; without one the container simply stays on HTTP.
+      - "${WEB_TLS_PORT:-8443}:443"
+    volumes:
+      - ./deploy/certs:/etc/nginx/certs:ro
 
 volumes:
   grocerytracker-postgres-data:

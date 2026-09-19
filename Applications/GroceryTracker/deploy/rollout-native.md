@@ -1,7 +1,8 @@
 # Rollout without containers
 
-For a Pi that already runs PostgreSQL and nginx, or one too small to build container images. You
-need the .NET 10 SDK on the machine, because both the API and the PWA are published there.
+For a **Debian 13 (Trixie)** Pi that already runs PostgreSQL and nginx, or one too small to build
+container images. You need the .NET 10 SDK on the machine, because both the API and the PWA are
+published there.
 
 The container route in [`rollout-containers.md`](rollout-containers.md) is less work and is what the
 rest of the documentation assumes. Use this one deliberately.
@@ -19,12 +20,33 @@ rest of the documentation assumes. Use this one deliberately.
 
 ### 1. Prerequisites
 
+Debian ships nginx and PostgreSQL (17 on Trixie), but **not .NET** — there is no `dotnet-sdk`
+package in Debian at all. It comes from Microsoft's feed, which does publish arm64 packages for
+.NET 10 (it does not for .NET 8 or 9, so do not "fall back" to an older SDK here):
+
 ```bash
 sudo apt update
-sudo apt install -y nginx postgresql dotnet-sdk-10.0
+sudo apt install -y nginx postgresql wget
+
+wget https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb \
+  -O packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
+rm packages-microsoft-prod.deb
+
+sudo apt update
+sudo apt install -y dotnet-sdk-10.0
+dotnet --list-sdks
 ```
 
+> On a 32-bit system (`dpkg --print-architecture` says `armhf`) the feed has nothing for you.
+> Install with Microsoft's script instead — `wget https://dot.net/v1/dotnet-install.sh && bash
+> dotnet-install.sh --channel 10.0` — and use `-r linux-arm` in place of `-r linux-arm64` in every
+> publish command below.
+
 ### 2. Database and service account
+
+Debian starts and enables the PostgreSQL cluster for you on install; `systemctl status postgresql`
+confirms it.
 
 ```bash
 sudo -u postgres createuser grocerytracker --pwprompt
@@ -132,13 +154,19 @@ dotnet ef database update <PreviousMigrationName> \
 `--connection` is required: the design-time factory points at a dummy database, because its only job
 is to let `dotnet ef migrations add` build the model without the ASP.NET Core targeting pack.
 
-or restore the dump you took first:
+Or restore the dump you took first:
 
 ```bash
 sudo systemctl stop grocerytracker-api
 gunzip -c ~/grocerytracker-<date>.sql.gz | psql -h 127.0.0.1 -U grocerytracker grocerytracker
 sudo systemctl start grocerytracker-api
 ```
+
+## HTTPS
+
+An installed PWA needs it. [`https.md`](https.md) covers making the certificate and trusting it on
+your devices; the nginx side for this install is a second `server { listen 443 ssl; ... }` block in
+`/etc/nginx/sites-available/grocerytracker`, which that guide spells out.
 
 ## Logs
 

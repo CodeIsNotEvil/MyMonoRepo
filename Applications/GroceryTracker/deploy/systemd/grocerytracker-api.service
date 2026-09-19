@@ -1,4 +1,4 @@
-# Native (non-container) API service for Ubuntu Server on the Pi.
+# Native (non-container) API service for Debian on the Pi.
 #
 #   sudo cp deploy/systemd/grocerytracker-api.service /etc/systemd/system/
 #   sudo systemctl daemon-reload

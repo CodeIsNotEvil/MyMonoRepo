@@ -6,12 +6,20 @@ version on it.
 | File | What it is |
 |---|---|
 | [`rollout-containers.md`](rollout-containers.md) | **Start here.** Install and update the whole stack with Compose (Docker or Podman) |
+| [`https.md`](https.md) | Issue a certificate, trust it on your devices, and serve the app over HTTPS — required before a phone will install it as an app |
 | [`rollout-native.md`](rollout-native.md) | The same app without a container engine: systemd + nginx + a system PostgreSQL |
-| [`nginx/grocerytracker.container.conf.template`](nginx/grocerytracker.container.conf.template) | nginx config baked into the `web` image. Not used by the native install |
+| [`tls/make-cert.sh`](tls/make-cert.sh) | Creates the local certificate authority and the server certificate |
+| `certs/` | Where those land. Git-ignored: private keys never belong in a repo |
+| [`nginx/grocerytracker.container.conf.template`](nginx/grocerytracker.container.conf.template) | The `web` image's HTTP server block |
+| [`nginx/tls-server.conf.template`](nginx/tls-server.conf.template) | Its HTTPS server block, switched on at start only when a certificate is mounted |
+| [`nginx/app-common.conf`](nginx/app-common.conf) | Everything the two server blocks share, so they cannot drift apart |
 | [`nginx/grocerytracker.site.conf`](nginx/grocerytracker.site.conf) | nginx site for the native install |
 | [`systemd/grocerytracker-api.service`](systemd/grocerytracker-api.service) | systemd unit for the native install |
 
 ## Which one
+
+The target machine is a Raspberry Pi running **Debian 13 (Trixie)**, which is also what 64-bit
+Raspberry Pi OS is built on; both runbooks assume that and arm64.
 
 Containers unless you have a reason not to. One command builds and starts everything, migrations run
 in the right order by themselves, and PostgreSQL never leaves the stack's own network. The native
@@ -28,7 +36,8 @@ Four things ship together and all of them come from the same commit:
    directly.
 3. **The PWA** — static files from `src/UI/GroceryTracker.UI.Blazor`, served by nginx.
 4. **nginx** — the only thing listening on a published port. It serves the PWA and proxies `/api`
-   to the API, which is what keeps the browser on a single origin.
+   to the API, which is what keeps the browser on a single origin. It serves HTTPS as well as HTTP
+   as soon as a certificate exists in `certs/`, and only then.
 
 Two properties of this app shape every rollout:
 

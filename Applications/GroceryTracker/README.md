@@ -3,8 +3,8 @@
 Tracks and analyses household grocery spending. The frontend is a Blazor WebAssembly **standalone**
 PWA that works with no connection at all and reconciles with the backend once it can reach it.
 
-Built to run on a Raspberry Pi with Ubuntu Server: nginx serves the WebAssembly app and proxies the
-API to an ASP.NET Core backend, which talks to PostgreSQL through EF Core.
+Built to run on a Raspberry Pi with Debian 13 (Trixie): nginx serves the WebAssembly app and
+proxies the API to an ASP.NET Core backend, which talks to PostgreSQL through EF Core.
 
 ## Architecture
 
@@ -308,10 +308,10 @@ Compose](deploy/rollout-containers.md) covers installing, updating, backups and 
 [rollout without containers](deploy/rollout-native.md) covers the systemd and nginx route. The rest
 of this section is the short version.
 
-The Pi target is Ubuntu Server, so Docker Engine is the path of least friction there — it is what
-Ubuntu's own docs and apt repo cover, and its restart policies and socket activation need no extra
-setup. If you'd rather run Podman on the Pi too for consistency with your dev machine, the compose
-file works identically there; see the callout at the end of each step.
+The Pi target is **Debian 13 (Trixie)** on arm64, which is also what 64-bit Raspberry Pi OS is
+built on. Docker Engine from Docker's own apt repository is the path of least friction: Debian's
+`docker.io` package does not ship the Compose V2 plugin this file needs. If you'd rather run Podman
+on the Pi too, for consistency with your dev machine, the compose file works identically there.
 
 ### 1. Prepare the Pi
 
@@ -326,20 +326,30 @@ Note the Pi's hostname or IP (`hostname -I`) — you'll use it from your phone a
 
 ### 2. Install a container engine + Compose
 
-**Docker (recommended for Ubuntu Server):**
+**Docker (recommended on Debian):** use Docker's apt repository, which publishes arm64 packages for
+Trixie and includes the Compose V2 plugin.
 
 ```bash
-curl -fsSL https://get.docker.com | sudo sh
+sudo apt install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo usermod -aG docker "$USER"
 newgrp docker   # or log out and back in
-docker compose version   # confirms the compose plugin is present
+docker compose version   # confirms the Compose V2 plugin is present
 ```
 
 **Podman instead**, if you'd rather match your dev machine — install it from apt, but get the
-`docker-compose` binary straight from its GitHub releases rather than apt's package. Ubuntu/Debian
-have a history of shipping the old, deprecated Compose V1 (which doesn't understand
-`depends_on: condition:`, and this compose file relies on that); the binary below is the same
-current release you're already running on your dev machine:
+`docker-compose` binary straight from its GitHub releases rather than apt's package. Debian ships
+the old, deprecated Compose V1 under that name (it doesn't understand `depends_on: condition:`,
+which this compose file relies on); the binary below is the same current release you're already
+running on your dev machine:
 
 ```bash
 sudo apt install -y podman
@@ -403,7 +413,8 @@ The last command should return a JSON payload with one seeded household and two 
 ### 6. Open it up to your LAN
 
 ```bash
-sudo ufw allow 8080/tcp    # only if ufw is active; check with `sudo ufw status`
+# Debian installs no firewall by default — skip this unless you added one.
+sudo ufw allow 8080/tcp    # only if ufw is installed and active; check with `sudo ufw status`
 ```
 
 Visit `http://<pi-hostname-or-ip>:8080` from your phone and laptop.
@@ -460,8 +471,9 @@ and keeps working in the shop with no signal.
 Two caveats worth knowing:
 
 - **Service workers need a secure context.** `http://` works on `localhost`, but for the PWA to
-  install and cache on your phone the site has to be `https://` or a `localhost` tunnel. The
-  easiest route on a home network is a Tailscale hostname with its certificate, or a local CA.
+  install and cache on your phone the site has to be `https://`. [`deploy/https.md`](deploy/https.md)
+  walks through issuing your own certificate, trusting it on Android and the rest, and turning on
+  the HTTPS port — the compose stack serves it as soon as a certificate exists in `deploy/certs`.
 - **`nginx` must not cache `index.html`, `service-worker.js` or `service-worker-assets.js`.** Those
   three decide when a device picks up a new build; the supplied configs already set `no-cache` on
   them and cache the fingerprinted `_framework/` assets forever.
