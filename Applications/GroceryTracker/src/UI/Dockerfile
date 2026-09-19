@@ -1,5 +1,5 @@
 # Publishes the Blazor WebAssembly app and serves the static output from nginx, which is what
-# actually runs on the Pi. The BFF is reached through this same nginx, so the browser only ever
+# actually runs on the Pi. The API is reached through this same nginx, so the browser only ever
 # talks to one origin.
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -27,7 +27,7 @@ COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
 COPY deploy/nginx/grocerytracker.container.conf.template /etc/nginx/templates/default.conf.template
 
 # Turns on the base image's own local-resolver detection (a stock entrypoint script, gated behind
-# this var), which the template's `resolver` directive needs so nginx re-resolves the `bff`
+# this var), which the template's `resolver` directive needs so nginx re-resolves the `api`
 # container's address instead of caching whatever it was on nginx's first request to it.
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 

@@ -90,7 +90,8 @@ else
 
         <p class="text-sm muted">
             The total above is what counts as spend. Items just split it across categories —
-            anything you do not itemise shows up as uncategorised.
+            anything you do not itemise shows up as uncategorised. The first item starts out as the
+            whole total@(_defaultCategory is null ? "" : " under " + _defaultCategory.Name).
         </p>
 
         @foreach (var item in _items)
@@ -149,6 +150,7 @@ else
   public Guid? Id { get; set; }
 
   private ShoppingTrip _trip = new();
+  private Category? _defaultCategory;
   private List<ExpenseItem> _items = [];
   private List<Store> _stores = [];
   private List<Category> _categories = [];
@@ -179,6 +181,7 @@ else
     _stores = await Data.GetStoresAsync();
     _categories = await Data.GetCategoriesAsync();
     _members = await Data.GetMembersAsync();
+    _defaultCategory = await Data.GetDefaultCategoryAsync();
 
     if (_household is not null)
     {
@@ -206,17 +209,33 @@ else
         };
         _items = [];
         _purchasedOn = DateTime.Today;
+
+        var remembered = await Data.GetDefaultPayerIdAsync();
+        _paidBy = remembered is { } payer && _members.Any(m => m.Id == payer) ? payer.ToString() : null;
       }
     }
 
     _loading = false;
   }
 
-  private void AddItem() => _items.Add(new ExpenseItem
+  /// <summary>
+  /// The first item opens with the whole receipt under Groceries, because that is what most trips
+  /// are. Splitting it means editing the amount down and adding a second item.
+  /// </summary>
+  private void AddItem()
   {
-    HouseholdId = _household!.Id,
-    TripId = _trip.Id,
-  });
+    var isFirst = _items.Count == 0;
+
+    _items.Add(new ExpenseItem
+    {
+      HouseholdId = _household!.Id,
+      TripId = _trip.Id,
+      Amount = isFirst ? _trip.TotalAmount : 0m,
+      CategoryId = isFirst ? _defaultCategory?.Id : null,
+    });
+  }
+
+
 
   private async Task AddStoreAsync()
   {
@@ -249,6 +268,13 @@ else
       _trip.HouseholdId = _household!.Id;
       _trip.PurchasedOn = DateOnly.FromDateTime(_purchasedOn);
       _trip.PaidByMemberId = Guid.TryParse(_paidBy, out var memberId) ? memberId : null;
+
+      if (_members.Count > 0)
+      {
+        await Data.SetDefaultPayerIdAsync(_trip.PaidByMemberId);
+      }
+
+      await Data.SetDefaultCategoryIdAsync(_items.FirstOrDefault()?.CategoryId);
 
       var items = _items
         .Where(i => !string.IsNullOrWhiteSpace(i.Description) || i.Amount != 0m)

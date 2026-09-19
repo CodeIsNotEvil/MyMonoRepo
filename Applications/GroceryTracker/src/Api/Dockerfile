@@ -4,20 +4,20 @@ WORKDIR /src
 
 # Project files first: this layer only changes when a dependency changes, so the restore stays
 # cached across ordinary code edits. That matters when building on a Pi.
-COPY src/Bff/GroceryTracker.Bff.csproj src/Bff/
+COPY src/Api/GroceryTracker.Api.csproj src/Api/
 COPY src/Application/GroceryTracker.Application.csproj src/Application/
 COPY src/Infrastructure/GroceryTracker.Infrastructure.csproj src/Infrastructure/
 COPY src/Contracts/GroceryTracker.Contracts.csproj src/Contracts/
 COPY src/Domain/GroceryTracker.Domain.csproj src/Domain/
-# Bff references the Blazor client project (that's what lets it self-host the WASM app for `dotnet
+# The API references the Blazor client project (that's what lets it self-host the WASM app for `dotnet
 # run`), so restore needs this csproj present too, or it silently fails to resolve the client's own
 # packages and publish later dies looking for an assets file that restore never produced.
 COPY src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.csproj src/UI/GroceryTracker.UI.Blazor/
 
-RUN dotnet restore src/Bff/GroceryTracker.Bff.csproj
+RUN dotnet restore src/Api/GroceryTracker.Api.csproj
 
 COPY src/ src/
-RUN dotnet publish src/Bff/GroceryTracker.Bff.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish src/Api/GroceryTracker.Api.csproj -c Release -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
@@ -39,4 +39,4 @@ ENV ASPNETCORE_URLS=http://+:5000 \
 COPY --from=build /app/publish .
 
 EXPOSE 5000
-ENTRYPOINT ["dotnet", "GroceryTracker.Bff.dll"]
+ENTRYPOINT ["dotnet", "GroceryTracker.Api.dll"]

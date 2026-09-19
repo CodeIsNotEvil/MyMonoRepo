@@ -150,7 +150,7 @@ public sealed class SyncEngine : IAsyncDisposable
 
       if (response is null)
       {
-        throw new InvalidOperationException("The BFF returned an empty sync response.");
+        throw new InvalidOperationException("The server returned an empty sync response.");
       }
 
       if (response.ServerReset)

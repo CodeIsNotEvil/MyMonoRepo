@@ -41,6 +41,17 @@ public sealed record TopItem(
 /// The full analytics payload. Computed by <see cref="SpendAnalyzer"/> on the server from
 /// PostgreSQL and on the client from the IndexedDB cache, so the numbers match while offline.
 /// </summary>
+/// <param name="YearToDateSpend">
+/// Spend since 1 January of the year <see cref="To"/> falls in. Independent of the selected
+/// window, so switching range does not change it.
+/// </param>
+/// <param name="AverageMonthlySpend">
+/// Typical spend per month over the twelve full months before <see cref="To"/>'s month. The
+/// running month is left out: two days into it, its total would drag the average down.
+/// </param>
+/// <param name="AverageMonthlyMonths">
+/// How many months that average actually covers — fewer than twelve when the history is shorter.
+/// </param>
 public sealed record SpendSummary(
   DateOnly From,
   DateOnly To,
@@ -50,6 +61,9 @@ public sealed record SpendSummary(
   decimal AverageTripAmount,
   decimal PreviousPeriodSpend,
   decimal? ChangeVsPreviousPct,
+  decimal YearToDateSpend,
+  decimal AverageMonthlySpend,
+  int AverageMonthlyMonths,
   IReadOnlyList<SpendPoint> Series,
   IReadOnlyList<CategorySlice> ByCategory,
   IReadOnlyList<StoreSlice> ByStore,
@@ -64,6 +78,9 @@ public sealed record SpendSummary(
     AverageTripAmount: 0m,
     PreviousPeriodSpend: 0m,
     ChangeVsPreviousPct: null,
+    YearToDateSpend: 0m,
+    AverageMonthlySpend: 0m,
+    AverageMonthlyMonths: 0,
     Series: [],
     ByCategory: [],
     ByStore: [],

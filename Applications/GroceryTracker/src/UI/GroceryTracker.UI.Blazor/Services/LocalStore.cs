@@ -9,7 +9,7 @@ namespace GroceryTracker.UI.Blazor.Services;
 /// </summary>
 /// <remarks>
 /// Every read the UI performs goes through here rather than over HTTP, which is what lets the app
-/// work unchanged with no connection. The BFF only ever feeds this cache via the sync engine.
+/// work unchanged with no connection. The API only ever feeds this cache via the sync engine.
 /// </remarks>
 public sealed class LocalStore : IAsyncDisposable
 {

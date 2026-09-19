@@ -205,7 +205,7 @@ public sealed class GroceryDataService
   }
 
   /// <summary>
-  /// Asks the BFF for the summary and falls back to computing it from the cache.
+  /// Asks the API for the summary and falls back to computing it from the cache.
   /// </summary>
   /// <remarks>
   /// Both paths run the same <see cref="SpendAnalyzer"/>, so the dashboard does not change its
@@ -257,6 +257,11 @@ public sealed class GroceryDataService
   private const string ImportStoreName = "Imported";
   private const string ImportStoreKey = "csv-import-store";
   private const string CurrentMemberSetting = "currentMemberId";
+  private const string DefaultPayerSetting = "defaultPayerMemberId";
+  private const string DefaultCategorySetting = "defaultCategoryId";
+
+  /// <summary>Stored instead of nothing, so "nobody in particular" survives as a deliberate choice.</summary>
+  private const string NobodyPaid = "none";
 
   public async Task<List<Settlement>> GetSettlementsAsync() =>
     (await _store.GetSettlementsAsync())
@@ -289,6 +294,61 @@ public sealed class GroceryDataService
 
   public async Task SetCurrentMemberIdAsync(Guid? memberId) =>
     await _store.SetSettingAsync(CurrentMemberSetting, memberId?.ToString());
+
+  /// <summary>
+  /// Who a new trip starts out as paid by: whoever this device last recorded, falling back to the
+  /// person the device belongs to.
+  /// </summary>
+  /// <remarks>
+  /// Kept apart from <see cref="GetCurrentMemberIdAsync"/> on purpose: logging one trip that your
+  /// partner paid for should not quietly reassign who "you" are on the balance screen.
+  /// </remarks>
+  public async Task<Guid?> GetDefaultPayerIdAsync()
+  {
+    var remembered = await _store.GetSettingAsync(DefaultPayerSetting);
+
+    if (remembered is null)
+    {
+      return await GetCurrentMemberIdAsync();
+    }
+
+    return Guid.TryParse(remembered, out var id) ? id : null;
+  }
+
+  /// <summary>Remembers the payer on this device only. <see cref="NobodyPaid"/> is a real answer.</summary>
+  public async Task SetDefaultPayerIdAsync(Guid? memberId) =>
+    await _store.SetSettingAsync(DefaultPayerSetting, memberId?.ToString() ?? NobodyPaid);
+
+  /// <summary>
+  /// The category a new line item or an import starts in: whatever this device used last, or else
+  /// the household's first category.
+  /// </summary>
+  /// <remarks>
+  /// Deliberately not matched on a name like "Groceries" — categories get renamed and translated,
+  /// and a default that silently stops working is worse than no default.
+  /// </remarks>
+  public async Task<Category?> GetDefaultCategoryAsync()
+  {
+    var categories = await GetCategoriesAsync();
+
+    if (categories.Count == 0)
+    {
+      return null;
+    }
+
+    return Guid.TryParse(await _store.GetSettingAsync(DefaultCategorySetting), out var id)
+      ? categories.FirstOrDefault(c => c.Id == id) ?? categories[0]
+      : categories[0];
+  }
+
+  /// <summary>Only a real category is remembered: "uncategorised" is not a default worth keeping.</summary>
+  public async Task SetDefaultCategoryIdAsync(Guid? categoryId)
+  {
+    if (categoryId is { } id)
+    {
+      await _store.SetSettingAsync(DefaultCategorySetting, id.ToString());
+    }
+  }
 
   /// <summary>
   /// Works out what importing would change. Ids come from the booking's key, so importing the same

@@ -47,7 +47,7 @@ async function onActivate(event) {
 async function onFetch(event) {
   const url = new URL(event.request.url);
 
-  // Never cache the BFF. A stale sync or analytics response would be worse than an honest failure,
+  // Never cache the API. A stale sync or analytics response would be worse than an honest failure,
   // which the client already handles by falling back to its local cache.
   if (url.pathname.startsWith('/api/') || url.pathname === '/health') {
     return fetch(event.request);

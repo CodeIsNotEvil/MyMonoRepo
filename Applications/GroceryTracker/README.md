@@ -4,7 +4,7 @@ Tracks and analyses household grocery spending. The frontend is a Blazor WebAsse
 PWA that works with no connection at all and reconciles with the backend once it can reach it.
 
 Built to run on a Raspberry Pi with Ubuntu Server: nginx serves the WebAssembly app and proxies the
-API to an ASP.NET Core BFF, which talks to PostgreSQL through EF Core.
+API to an ASP.NET Core backend, which talks to PostgreSQL through EF Core.
 
 ## Architecture
 
@@ -21,7 +21,7 @@ API to an ASP.NET Core BFF, which talks to PostgreSQL through EF Core.
   │ nginx (Raspberry Pi)         │  serves wwwroot, proxies /api
   └──────────────┬───────────────┘
   ┌──────────────▼───────────────┐
-  │ GroceryTracker.Bff           │  ASP.NET Core
+  │ GroceryTracker.Api           │  ASP.NET Core
   │  • SyncService               │
   │  • AnalyticsService          │  ← runs the same SpendAnalyzer
   └──────────────┬───────────────┘
@@ -30,8 +30,8 @@ API to an ASP.NET Core BFF, which talks to PostgreSQL through EF Core.
   └──────────────────────────────┘
 ```
 
-The browser only ever talks to one origin. That is what makes this a BFF rather than a public API:
-there is no CORS in production, and the database is never exposed.
+The browser only ever talks to one origin, and the API is shaped around this one frontend rather
+than being a public API: there is no CORS in production, and the database is never exposed.
 
 ### Projects
 
@@ -41,7 +41,7 @@ there is no CORS in production, and the database is never exposed.
 | `src/Contracts` | The sync wire protocol shared by client and server |
 | `src/Infrastructure` | EF Core `DbContext`, configurations, migrations |
 | `src/Application` | `SyncService`, `AnalyticsService`, household provisioning |
-| `src/Bff` | ASP.NET Core host: `/api/sync`, `/api/analytics`, `/health` |
+| `src/Api` | ASP.NET Core host: `/api/sync`, `/api/analytics`, `/health` |
 | `src/MigrationRunner` | Applies migrations as a one-shot container |
 | `src/UI/GroceryTracker.UI.Blazor` | The PWA |
 
@@ -100,24 +100,24 @@ install needed.
 ```bash
 # bash/zsh — one command, serves both the API and the PWA on http://localhost:5000
 export ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=grocerytracker;Username=postgres;Password=postgres"
-dotnet run --project src/Bff
+dotnet run --project src/Api
 ```
 
 ```fish
 # fish — same thing
 set -x ConnectionStrings__DefaultConnection "Host=localhost;Port=5432;Database=grocerytracker;Username=postgres;Password=postgres"
-dotnet run --project src/Bff
+dotnet run --project src/Api
 ```
 
-The BFF migrates the database and seeds a household with two categories, *Groceries* and *Household*, on startup.
+The API migrates the database and seeds a household with two categories, *Groceries* and *Household*, on startup.
 
 To work on the frontend with hot reload, run the client separately. Set `ApiBaseUrl` in
 `wwwroot/appsettings.Development.json` to `http://localhost:5000` first — it ships empty, which
-means "same origin", because that is what is correct both behind nginx and when the BFF hosts the
-app itself. The BFF allows the dev-server origin in development only:
+means "same origin", because that is what is correct both behind nginx and when the API hosts the
+app itself. The API allows the dev-server origin in development only:
 
 ```bash
-dotnet run --project src/Bff                         # :5000
+dotnet run --project src/Api                         # :5000
 dotnet run --project src/UI/GroceryTracker.UI.Blazor # :5173
 ```
 
@@ -131,13 +131,40 @@ Covers the analyzer's arithmetic, the CSV import parser, the sync engine's
 conflict/idempotency/ordering behaviour against a real relational database, the stamp allocation,
 and the chart geometry.
 
-On Arch/CachyOS the `Bff` project also needs the ASP.NET Core *targeting pack*, which is a separate
+On Arch/CachyOS the `Api` project also needs the ASP.NET Core *targeting pack*, which is a separate
 package from the runtime. Without it the build stops with `NETSDK1226: Prune Package data not found`
 (the container builds are unaffected — the SDK image ships it):
 
 ```fish
 sudo pacman -S aspnet-targeting-pack
 ```
+
+## The dashboard
+
+Four ranges: **This month**, 3, 6 and 12 months. The three multi-month ranges chart weekly or
+monthly buckets; **This month** charts every shopping day instead and lists each entry underneath,
+so a month can be read receipt by receipt rather than as one bar.
+
+Two of the tiles ignore the selected range on purpose, because they answer questions the range
+cannot:
+
+- **Year to date** — everything since 1 January of the current year.
+- **Per month** — the average over the last twelve *full* months. The running month is excluded: two
+  days into a month its total is not comparable to a whole one, and including it would make the
+  figure dip and recover every month. A shorter history is averaged over the months it actually
+  covers, and the tile says how many that was.
+
+## Recording a trip
+
+The total is what counts as spend; line items are optional and only split it across categories.
+Two conveniences make the common case one tap:
+
+- **The first line item opens with the whole total**, in the category this device used last (the
+  household's first category until then) — so "all of it was groceries" needs no typing. Splitting a
+  receipt means editing that amount down and adding a second item.
+- **Paid by is remembered on this device**, like *this device belongs to* on the Balance screen.
+  It is a separate setting, so logging one trip your partner paid for does not reassign who *you*
+  are on the balance.
 
 ## Importing bookings from a spreadsheet
 
@@ -232,7 +259,7 @@ The app is now at `http://localhost:8080`. Useful commands, all with the `podman
 `docker`:
 
 ```fish
-podman compose logs -f bff       # tail one service's logs
+podman compose logs -f api       # tail one service's logs
 podman compose down              # stop and remove containers (the postgres volume survives)
 podman compose down -v           # also wipe the database volume — start over from empty
 podman compose up -d --build     # rebuild after pulling code changes
@@ -256,25 +283,30 @@ none were actually Podman-specific, just never exercised until now:
   inside the build container — so restore would succeed, and the immediately following publish
   would fail claiming a package "wasn't found", even though it had just been restored. Fixed by
   adding `.dockerignore`.
-- **The BFF's healthcheck used `wget`.** `mcr.microsoft.com/dotnet/aspnet:10.0` ships neither `wget`
+- **The API's healthcheck used `wget`.** `mcr.microsoft.com/dotnet/aspnet:10.0` ships neither `wget`
   nor `curl`, so the healthcheck could never succeed. Fixed by installing `curl` in that image's
   final layer and switching the compose healthcheck to use it.
-- **nginx cached `bff`'s IP forever.** `proxy_pass http://bff:5000;` (a literal hostname) resolves
+- **nginx cached `api`'s IP forever.** `proxy_pass http://api:5000;` (a literal hostname) resolves
   once, when nginx starts, and holds onto that address for as long as the container runs. Rebuild or
-  recreate just the `bff` container — which is exactly what happens on the Pi every time you update
+  recreate just the `api` container — which is exactly what happens on the Pi every time you update
   only the backend — and it gets a new internal IP that `web` never learns about; every request
   after that hangs until `web` itself is restarted too. Fixed by turning on the base nginx image's
   own resolver detection (`NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1`) and routing `proxy_pass` through a
-  variable, which together make nginx re-resolve `bff` instead of caching it — verified by recreating
-  `bff` alone and confirming `web` picked up its new address with no restart of its own.
+  variable, which together make nginx re-resolve `api` instead of caching it — verified by recreating
+  `api` alone and confirming `web` picked up its new address with no restart of its own.
 - Also, unrelated to Podman: **every `wget`/curl-less container that talks to Postgres logged
   `Cannot load library libgssapi_krb5.so.2`** on every single connection attempt, success or not —
   Npgsql probing for a Kerberos library the slim runtime images don't ship, then quietly falling back
   to normal password/SCRAM auth. Harmless, but it looks exactly like a fatal error and is a red
-  herring next to a *real* connection failure. Installed `libgssapi-krb5-2` in both the BFF and
+  herring next to a *real* connection failure. Installed `libgssapi-krb5-2` in both the API and
   migration-runner images to make the logs trustworthy again.
 
 ## Deploying to the Raspberry Pi
+
+The step-by-step runbooks live in [`deploy/`](deploy/README.md): [rollout with
+Compose](deploy/rollout-containers.md) covers installing, updating, backups and rolling back, and
+[rollout without containers](deploy/rollout-native.md) covers the systemd and nginx route. The rest
+of this section is the short version.
 
 The Pi target is Ubuntu Server, so Docker Engine is the path of least friction there — it is what
 Ubuntu's own docs and apt repo cover, and its restart policies and socket activation need no extra
@@ -393,7 +425,7 @@ docker compose up -d --build
 
 Existing data survives: the Postgres volume is untouched by a rebuild, and EF Core migrations run
 automatically via the `migration-runner` service on every `up`. This also only recreates the
-containers whose image actually changed — usually just `bff` — and `web` correctly picks up its new
+containers whose image actually changed — usually just `api` — and `web` correctly picks up its new
 address without needing a restart of its own (see the nginx resolver note above).
 
 ### Native install, without containers
@@ -402,9 +434,9 @@ If you'd rather not run a container engine on the Pi at all:
 
 ```bash
 # 1. the API
-dotnet publish src/Bff -c Release -r linux-arm64 --self-contained false -o /opt/grocerytracker
-sudo cp deploy/systemd/grocerytracker-bff.service /etc/systemd/system/
-sudo systemctl enable --now grocerytracker-bff       # listens on 127.0.0.1:5000
+dotnet publish src/Api -c Release -r linux-arm64 --self-contained false -o /opt/grocerytracker
+sudo cp deploy/systemd/grocerytracker-api.service /etc/systemd/system/
+sudo systemctl enable --now grocerytracker-api       # listens on 127.0.0.1:5000
 
 # 2. the PWA
 dotnet publish src/UI/GroceryTracker.UI.Blazor -c Release -o /tmp/gt
@@ -417,7 +449,7 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 This needs the .NET 10 SDK on the Pi (for `dotnet publish`) and a PostgreSQL you've set up
-separately. The connection string holds a password, so it goes in `/etc/grocerytracker/bff.env`
+separately. The connection string holds a password, so it goes in `/etc/grocerytracker/api.env`
 (root-readable only) rather than in the unit file.
 
 ### Installing it on your phone

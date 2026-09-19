@@ -38,6 +38,16 @@ else
             <div class="tile-note">was @Money.Format(_summary.PreviousPeriodSpend, Currency)</div>
         </div>
         <div class="tile">
+            <div class="tile-label">Year to date</div>
+            <div class="tile-value">@Money.Format(_summary.YearToDateSpend, Currency)</div>
+            <div class="tile-note">since 1 Jan @To.Year</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">Per month</div>
+            <div class="tile-value">@(_summary.AverageMonthlyMonths == 0 ? "—" : Money.Format(_summary.AverageMonthlySpend, Currency))</div>
+            <div class="tile-note">@MonthlyAverageNote</div>
+        </div>
+        <div class="tile">
             <div class="tile-label">Trips</div>
             <div class="tile-value">@_summary.TripCount</div>
             <div class="tile-note">shopping trips</div>
@@ -53,16 +63,53 @@ else
         <div class="card-header">
             <h2>Spend over time</h2>
             <div class="spacer"></div>
-            <div class="segmented" role="group" aria-label="Granularity">
-                <button type="button" class="@(_granularity == SpendGranularity.Week ? "active" : null)"
-                        @onclick="() => ChangeGranularityAsync(SpendGranularity.Week)">Weekly</button>
-                <button type="button" class="@(_granularity == SpendGranularity.Month ? "active" : null)"
-                        @onclick="() => ChangeGranularityAsync(SpendGranularity.Month)">Monthly</button>
-            </div>
+            @if (IsThisMonth)
+            {
+                <span class="text-sm muted">per day</span>
+            }
+            else
+            {
+                <div class="segmented" role="group" aria-label="Granularity">
+                    <button type="button" class="@(_granularity == SpendGranularity.Week ? "active" : null)"
+                            @onclick="() => ChangeGranularityAsync(SpendGranularity.Week)">Weekly</button>
+                    <button type="button" class="@(_granularity == SpendGranularity.Month ? "active" : null)"
+                            @onclick="() => ChangeGranularityAsync(SpendGranularity.Month)">Monthly</button>
+                </div>
+            }
         </div>
 
-        <BarChart Points="@ChartPoints" AriaLabel="@($"Grocery spend per {_granularity.ToString().ToLowerInvariant()}")" />
+        <BarChart Points="@ChartPoints" AriaLabel="@($"Grocery spend per {Granularity.ToString().ToLowerInvariant()}")" />
     </section>
+
+    @if (IsThisMonth)
+    {
+        <section class="card">
+            <div class="card-header">
+                <h2>Every entry</h2>
+                <span class="spacer amount">@Money.Format(_entries.Sum(t => t.TotalAmount), Currency)</span>
+            </div>
+
+            @if (_entries.Count == 0)
+            {
+                <p class="muted text-sm mb-0">Nothing bought yet in @To.ToString("MMMM", CultureInfo.InvariantCulture).</p>
+            }
+            else
+            {
+                <ul class="list">
+                    @foreach (var trip in _entries)
+                    {
+                        <li class="list-row" style="cursor:pointer;" @onclick="() => Edit(trip.Id)">
+                            <div class="grow">
+                                <div class="row-title">@StoreName(trip.StoreId)</div>
+                                <div class="row-sub">@EntrySubtitle(trip)</div>
+                            </div>
+                            <span class="amount">@Money.Format(trip.TotalAmount, Currency)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
 
     <section class="card">
         <div class="card-header"><h2>By category</h2></div>
@@ -156,6 +203,7 @@ else
 @code {
   private static readonly (int Months, string Label)[] RangeOptions =
   [
+    (1, "This month"),
     (3, "3 months"),
     (6, "6 months"),
     (12, "12 months"),
@@ -163,11 +211,19 @@ else
 
   private SpendSummary? _summary;
   private Household? _household;
+  private List<ShoppingTrip> _entries = [];
+  private Dictionary<Guid, string> _stores = [];
+  private Dictionary<Guid, string> _members = [];
   private bool _loading = true;
   private int _months = 6;
   private SpendGranularity _granularity = SpendGranularity.Month;
 
   private string Currency => _household?.CurrencyCode ?? "EUR";
+
+  /// <summary>The current month is shown entry by entry, so a week or month bucket makes no sense.</summary>
+  private bool IsThisMonth => _months == 1;
+
+  private SpendGranularity Granularity => IsThisMonth ? SpendGranularity.Day : _granularity;
 
   private DateOnly To => DateOnly.FromDateTime(DateTime.Now);
 
@@ -180,7 +236,16 @@ else
     }
   }
 
-  private string RangeLabel => $"{From:MMM yyyy} – {To:MMM yyyy}";
+  private string RangeLabel => IsThisMonth
+    ? To.ToString("MMMM yyyy", CultureInfo.InvariantCulture)
+    : $"{From:MMM yyyy} – {To:MMM yyyy}";
+
+  private string MonthlyAverageNote => _summary?.AverageMonthlyMonths switch
+  {
+    null or 0 => "after a full month",
+    1 => "average of 1 full month",
+    var months => $"average of {months} full months",
+  };
 
   private IReadOnlyList<BarChart.Bar> ChartPoints => _summary is null
     ? []
@@ -210,8 +275,40 @@ else
   {
     _loading = true;
     _household = await Data.GetHouseholdAsync();
-    _summary = await Data.GetSummaryAsync(From, To, _granularity);
+    _summary = await Data.GetSummaryAsync(From, To, Granularity);
+
+    if (IsThisMonth)
+    {
+      _stores = (await Data.GetStoresAsync()).ToDictionary(s => s.Id, s => s.Name);
+      _members = (await Data.GetMembersAsync()).ToDictionary(m => m.Id, m => m.DisplayName);
+      _entries = (await Data.GetTripsAsync())
+        .Where(t => t.PurchasedOn >= From && t.PurchasedOn <= To)
+        .ToList();
+    }
+
     _loading = false;
+  }
+
+  private void Edit(Guid tripId) => Nav.NavigateTo($"trips/{tripId}");
+
+  // A trip can outlive the store it points at if another device retired that store.
+  private string StoreName(Guid storeId) => _stores.GetValueOrDefault(storeId, "Unknown store");
+
+  private string EntrySubtitle(ShoppingTrip trip)
+  {
+    var parts = new List<string> { trip.PurchasedOn.ToString("ddd d MMM", CultureInfo.InvariantCulture) };
+
+    if (trip.PaidByMemberId is { } payer && _members.TryGetValue(payer, out var payerName))
+    {
+      parts.Add(payerName);
+    }
+
+    if (!string.IsNullOrWhiteSpace(trip.Note))
+    {
+      parts.Add(trip.Note);
+    }
+
+    return string.Join(" · ", parts);
   }
 
   private async Task ChangeRangeAsync(int months)

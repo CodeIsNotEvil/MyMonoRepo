@@ -2,7 +2,7 @@ using GroceryTracker.Application.Analytics;
 using GroceryTracker.Domain.Analytics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GroceryTracker.Bff.Controllers;
+namespace GroceryTracker.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

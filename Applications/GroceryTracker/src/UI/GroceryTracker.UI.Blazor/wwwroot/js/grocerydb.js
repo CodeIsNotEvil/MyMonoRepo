@@ -2,7 +2,7 @@
 //
 // Everything the UI reads comes from here, never straight from the network, so the app behaves the
 // same in the shop with no signal as it does at home. The `outbox` store holds changes that have
-// not reached the BFF yet; `meta` holds the sync cursor.
+// not reached the API yet; `meta` holds the sync cursor.
 
 const DB_NAME = 'grocerytracker';
 // Version 2 adds the settlements store. Upgrading only creates what is missing, so an existing

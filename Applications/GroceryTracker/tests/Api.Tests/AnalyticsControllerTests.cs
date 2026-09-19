@@ -1,9 +1,9 @@
 using GroceryTracker.Application.Analytics;
-using GroceryTracker.Bff.Controllers;
+using GroceryTracker.Api.Controllers;
 using GroceryTracker.Domain.Analytics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GroceryTracker.Bff.Tests;
+namespace GroceryTracker.Api.Tests;
 
 /// <summary>
 /// Covers the window the controller picks when the client does not supply one, and the guard

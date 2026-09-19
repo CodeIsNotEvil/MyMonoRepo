@@ -21,7 +21,7 @@ public enum SyncOperationKind
 }
 
 /// <summary>
-/// A single change made on a device, recorded in the client outbox and replayed to the BFF once a
+/// A single change made on a device, recorded in the client outbox and replayed to the API once a
 /// connection is available.
 /// </summary>
 /// <param name="OperationId">

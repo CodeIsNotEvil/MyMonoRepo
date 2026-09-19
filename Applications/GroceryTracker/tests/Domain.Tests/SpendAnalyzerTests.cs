@@ -299,4 +299,111 @@ public class SpendAnalyzerTests
     Assert.Equal(new DateOnly(2026, 3, 1), summary.From);
     Assert.Equal(new DateOnly(2026, 3, 31), summary.To);
   }
+
+  [Fact]
+  public void Year_to_date_counts_this_year_only_and_ignores_the_window()
+  {
+    ShoppingTrip[] trips =
+    [
+      Trip("2025-12-30", 500m),
+      Trip("2026-01-04", 40m),
+      Trip("2026-03-15", 60m),
+      Trip("2026-04-02", 1000m),
+    ];
+
+    // A March-only window: year to date still reaches back to 1 January, and stops at `to`.
+    var summary = SpendAnalyzer.Summarise(
+      trips, Stores, Categories, new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31));
+
+    Assert.Equal(60m, summary.TotalSpend);
+    Assert.Equal(100m, summary.YearToDateSpend);
+  }
+
+  [Fact]
+  public void The_monthly_average_covers_the_twelve_full_months_before_the_running_one()
+  {
+    ShoppingTrip[] trips =
+    [
+      Trip("2025-01-10", 999m),   // 13 months before March 2026: outside the window
+      Trip("2025-03-10", 100m),
+      Trip("2025-09-10", 200m),
+      Trip("2026-02-10", 300m),
+      Trip("2026-03-05", 777m),   // the running month never counts towards the average
+    ];
+
+    var summary = SpendAnalyzer.Summarise(
+      trips, Stores, Categories, new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 20));
+
+    Assert.Equal(12, summary.AverageMonthlyMonths);
+    Assert.Equal(50m, summary.AverageMonthlySpend);
+  }
+
+  [Fact]
+  public void A_short_history_is_averaged_over_the_months_it_actually_covers()
+  {
+    ShoppingTrip[] trips =
+    [
+      Trip("2026-01-10", 300m),
+      Trip("2026-02-10", 100m),
+      Trip("2026-03-05", 999m),
+    ];
+
+    var summary = SpendAnalyzer.Summarise(
+      trips, Stores, Categories, new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 20));
+
+    Assert.Equal(2, summary.AverageMonthlyMonths);
+    Assert.Equal(200m, summary.AverageMonthlySpend);
+  }
+
+  [Fact]
+  public void Nothing_is_averaged_until_one_month_is_complete()
+  {
+    ShoppingTrip[] trips = [Trip("2026-03-02", 80m)];
+
+    var summary = SpendAnalyzer.Summarise(
+      trips, Stores, Categories, new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 20));
+
+    Assert.Equal(0, summary.AverageMonthlyMonths);
+    Assert.Equal(0m, summary.AverageMonthlySpend);
+    Assert.Equal(80m, summary.YearToDateSpend);
+  }
+
+  [Fact]
+  public void Year_to_date_and_the_average_survive_an_empty_window()
+  {
+    ShoppingTrip[] trips =
+    [
+      Trip("2026-01-10", 120m),
+      Trip("2026-02-10", 80m),
+    ];
+
+    // Nothing bought in March, but the year and the average are still worth showing.
+    var summary = SpendAnalyzer.Summarise(
+      trips, Stores, Categories, new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31));
+
+    Assert.Equal(0m, summary.TotalSpend);
+    Assert.Equal(200m, summary.YearToDateSpend);
+    Assert.Equal(2, summary.AverageMonthlyMonths);
+    Assert.Equal(100m, summary.AverageMonthlySpend);
+  }
+
+  [Fact]
+  public void A_daily_series_gives_every_shopping_day_its_own_bucket()
+  {
+    ShoppingTrip[] trips =
+    [
+      Trip("2026-03-02", 40m),
+      Trip("2026-03-02", 10m),
+      Trip("2026-03-05", 25m),
+    ];
+
+    var summary = SpendAnalyzer.Summarise(
+      trips, Stores, Categories, new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31),
+      SpendGranularity.Day);
+
+    Assert.Equal(2, summary.Series.Count);
+    Assert.Equal(50m, summary.Series[0].Amount);
+    Assert.Equal(2, summary.Series[0].TripCount);
+    Assert.Equal("02 Mar", summary.Series[0].Label);
+  }
 }

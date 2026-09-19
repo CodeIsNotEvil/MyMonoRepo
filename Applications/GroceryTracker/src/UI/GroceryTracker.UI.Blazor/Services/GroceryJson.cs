@@ -4,10 +4,10 @@ using System.Text.Json.Serialization;
 namespace GroceryTracker.UI.Blazor.Services;
 
 /// <summary>
-/// Serializer settings for talking to the BFF.
+/// Serializer settings for talking to the API.
 /// </summary>
 /// <remarks>
-/// The string enum converter has to match the BFF's, which writes enum names. Without it the client
+/// The string enum converter has to match the API's, which writes enum names. Without it the client
 /// would fail to read back a sync response the moment it contained a conflict.
 /// </remarks>
 public static class GroceryJson

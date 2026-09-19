@@ -1,27 +1,27 @@
-# Native (non-container) BFF service for Ubuntu Server on the Pi.
+# Native (non-container) API service for Ubuntu Server on the Pi.
 #
-#   sudo cp deploy/systemd/grocerytracker-bff.service /etc/systemd/system/
+#   sudo cp deploy/systemd/grocerytracker-api.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
-#   sudo systemctl enable --now grocerytracker-bff
+#   sudo systemctl enable --now grocerytracker-api
 #
 # The connection string holds a password, so it lives in an environment file readable only by root
 # rather than in this unit.
 
 [Unit]
-Description=Grocery Tracker BFF
+Description=Grocery Tracker API
 After=network-online.target postgresql.service
 Wants=network-online.target
 
 [Service]
 Type=notify
 WorkingDirectory=/opt/grocerytracker
-ExecStart=/usr/bin/dotnet /opt/grocerytracker/GroceryTracker.Bff.dll
+ExecStart=/usr/bin/dotnet /opt/grocerytracker/GroceryTracker.Api.dll
 
 # Bound to loopback: nginx is the only thing that should reach it directly.
 Environment=ASPNETCORE_URLS=http://127.0.0.1:5000
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
-EnvironmentFile=/etc/grocerytracker/bff.env
+EnvironmentFile=/etc/grocerytracker/api.env
 
 User=grocerytracker
 Group=grocerytracker
@@ -29,7 +29,7 @@ Group=grocerytracker
 Restart=always
 RestartSec=10
 KillSignal=SIGINT
-SyslogIdentifier=grocerytracker-bff
+SyslogIdentifier=grocerytracker-api
 
 # The service reads its own files and talks to PostgreSQL; it has no reason to write anywhere else.
 NoNewPrivileges=true

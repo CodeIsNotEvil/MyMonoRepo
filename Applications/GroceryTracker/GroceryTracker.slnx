@@ -3,8 +3,8 @@
   <Folder Name="/src/Application/">
     <Project Path="src/Application/GroceryTracker.Application.csproj" />
   </Folder>
-  <Folder Name="/src/Bff/">
-    <Project Path="src/Bff/GroceryTracker.Bff.csproj" />
+  <Folder Name="/src/Api/">
+    <Project Path="src/Api/GroceryTracker.Api.csproj" />
   </Folder>
   <Folder Name="/src/Contracts/">
     <Project Path="src/Contracts/GroceryTracker.Contracts.csproj" />
@@ -25,8 +25,8 @@
   <Folder Name="/tests/Application.Tests/">
     <Project Path="tests/Application.Tests/GroceryTracker.Application.Tests.csproj" />
   </Folder>
-  <Folder Name="/tests/Bff.Tests/">
-    <Project Path="tests/Bff.Tests/GroceryTracker.Bff.Tests.csproj" />
+  <Folder Name="/tests/Api.Tests/">
+    <Project Path="tests/Api.Tests/GroceryTracker.Api.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Domain.Tests/">
     <Project Path="tests/Domain.Tests/GroceryTracker.Domain.Tests.csproj" />

@@ -2,7 +2,7 @@ using GroceryTracker.Application.Sync;
 using GroceryTracker.Contracts.Sync;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GroceryTracker.Bff.Controllers;
+namespace GroceryTracker.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

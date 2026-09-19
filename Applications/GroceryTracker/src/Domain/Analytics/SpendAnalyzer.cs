@@ -7,7 +7,7 @@ namespace GroceryTracker.Domain.Analytics;
 /// Pure spend analytics over already-loaded trips.
 /// </summary>
 /// <remarks>
-/// Deliberately free of EF Core and HTTP so the identical code runs in the BFF against PostgreSQL
+/// Deliberately free of EF Core and HTTP so the identical code runs in the API against PostgreSQL
 /// and inside the browser against the IndexedDB cache. That is what keeps the dashboard showing
 /// the same numbers when the phone is offline in the shop.
 /// </remarks>
@@ -43,6 +43,8 @@ public static class SpendAnalyzer
     var live = trips.Where(t => !t.IsDeleted).ToList();
     var window = live.Where(t => t.PurchasedOn >= from && t.PurchasedOn <= to).ToList();
 
+    var (monthlyAverage, monthsAveraged) = MonthlyAverage(live, to);
+
     if (window.Count == 0)
     {
       var emptyPrevious = PreviousPeriodSpend(live, from, to);
@@ -50,6 +52,9 @@ public static class SpendAnalyzer
       {
         PreviousPeriodSpend = emptyPrevious,
         ChangeVsPreviousPct = PercentChange(0m, emptyPrevious),
+        YearToDateSpend = YearToDate(live, to),
+        AverageMonthlySpend = monthlyAverage,
+        AverageMonthlyMonths = monthsAveraged,
       };
     }
 
@@ -65,6 +70,9 @@ public static class SpendAnalyzer
       AverageTripAmount: decimal.Round(totalSpend / window.Count, 2, MidpointRounding.AwayFromZero),
       PreviousPeriodSpend: previousSpend,
       ChangeVsPreviousPct: PercentChange(totalSpend, previousSpend),
+      YearToDateSpend: YearToDate(live, to),
+      AverageMonthlySpend: monthlyAverage,
+      AverageMonthlyMonths: monthsAveraged,
       Series: BuildSeries(window, granularity),
       ByCategory: BuildCategorySlices(window, categoryLookup, totalSpend),
       ByStore: BuildStoreSlices(window, storeNames, totalSpend),
@@ -84,6 +92,58 @@ public static class SpendAnalyzer
     return trips
       .Where(t => t.PurchasedOn >= previousFrom && t.PurchasedOn <= previousTo)
       .Sum(t => t.TotalAmount);
+  }
+
+  /// <summary>Spend since 1 January of the year <paramref name="to"/> falls in, up to that day.</summary>
+  private static decimal YearToDate(List<ShoppingTrip> live, DateOnly to)
+  {
+    var yearStart = new DateOnly(to.Year, 1, 1);
+
+    return Round(live
+      .Where(t => t.PurchasedOn >= yearStart && t.PurchasedOn <= to)
+      .Sum(t => t.TotalAmount));
+  }
+
+  /// <summary>
+  /// Average spend per month over the twelve full months before <paramref name="to"/>'s month.
+  /// </summary>
+  /// <remarks>
+  /// The running month is excluded: early in a month its total is not yet comparable to a whole
+  /// one, and including it would make the average dip and recover every month. Months before the
+  /// first trip are excluded too, so a household two months in is not averaged over twelve.
+  /// </remarks>
+  /// <returns>The average and the number of months it covers, which is 0 with nothing to average.</returns>
+  private static (decimal Average, int Months) MonthlyAverage(List<ShoppingTrip> live, DateOnly to)
+  {
+    if (live.Count == 0)
+    {
+      return (0m, 0);
+    }
+
+    var lastFullMonth = new DateOnly(to.Year, to.Month, 1).AddMonths(-1);
+    var firstTripMonth = live.Min(t => t.PurchasedOn);
+    firstTripMonth = new DateOnly(firstTripMonth.Year, firstTripMonth.Month, 1);
+
+    if (firstTripMonth > lastFullMonth)
+    {
+      // Everything was bought this month: there is no full month to average over yet.
+      return (0m, 0);
+    }
+
+    var start = lastFullMonth.AddMonths(-11);
+    if (firstTripMonth > start)
+    {
+      start = firstTripMonth;
+    }
+
+    var months = ((lastFullMonth.Year - start.Year) * 12) + lastFullMonth.Month - start.Month + 1;
+    var end = lastFullMonth.AddMonths(1).AddDays(-1);
+
+    var total = live
+      .Where(t => t.PurchasedOn >= start && t.PurchasedOn <= end)
+      .Sum(t => t.TotalAmount);
+
+    return (Round(total / months), months);
   }
 
   private static decimal? PercentChange(decimal current, decimal previous)
@@ -244,4 +304,6 @@ public static class SpendAnalyzer
   private static decimal Share(decimal amount, decimal total) => total == 0m
     ? 0m
     : decimal.Round((amount / total) * 100m, 1, MidpointRounding.AwayFromZero);
+
+  private static decimal Round(decimal value) => decimal.Round(value, 2, MidpointRounding.AwayFromZero);
 }

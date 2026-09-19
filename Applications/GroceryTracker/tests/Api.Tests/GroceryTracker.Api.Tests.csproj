@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Bff\GroceryTracker.Bff.csproj" />
+    <ProjectReference Include="..\..\src\Api\GroceryTracker.Api.csproj" />
   </ItemGroup>
 
 </Project>

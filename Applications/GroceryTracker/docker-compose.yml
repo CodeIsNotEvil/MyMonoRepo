@@ -7,7 +7,7 @@
 # bare `docker-compose`, which won't know where Podman's socket is). See the README for setup.
 #
 # The browser only ever talks to the `web` service: it serves the Blazor app and proxies /api to the
-# BFF, which keeps everything on one origin and leaves PostgreSQL off the network entirely.
+# API, which keeps everything on one origin and leaves PostgreSQL off the network entirely.
 
 services:
   postgres:
@@ -43,10 +43,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     restart: "no"
 
-  bff:
+  api:
     build:
       context: .
-      dockerfile: src/Bff/Dockerfile
+      dockerfile: src/Api/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -72,7 +72,7 @@ services:
       dockerfile: src/UI/Dockerfile
     restart: unless-stopped
     depends_on:
-      bff:
+      api:
         condition: service_started
     ports:
       - "${WEB_PORT:-8080}:80"

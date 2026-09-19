@@ -47,7 +47,7 @@ public sealed record BalanceSummary(
 /// proportion to their <see cref="Member.ShareWeight"/>. A member's balance
 /// is what they paid, minus their share, plus transfers they sent, minus transfers they received —
 /// so recording a settlement moves the balance towards zero, and a balance of zero means square.
-/// Pure and free of EF Core and HTTP, so the BFF and the offline browser compute identical numbers.
+/// Pure and free of EF Core and HTTP, so the API and the offline browser compute identical numbers.
 /// </remarks>
 public static class BalanceCalculator
 {

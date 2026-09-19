@@ -5,7 +5,7 @@ namespace GroceryTracker.Infrastructure.Data;
 
 /// <summary>
 /// Lets `dotnet ef migrations add` build the model without starting the web host. That matters
-/// because the BFF needs the ASP.NET Core targeting pack to build, which not every dev machine has,
+/// because the API needs the ASP.NET Core targeting pack to build, which not every dev machine has,
 /// and generating a migration never touches a database — the connection string below is only there
 /// so the provider can be configured.
 /// </summary>

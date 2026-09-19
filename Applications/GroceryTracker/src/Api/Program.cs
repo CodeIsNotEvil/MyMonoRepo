@@ -31,7 +31,8 @@ builder.Services.AddHealthChecks()
   .AddDbContextCheck<GroceryTrackerDbContext>("database");
 
 // The PWA is served from this same origin in production, so CORS is only needed for the Blazor dev
-// server on localhost. Keeping it out of production is what makes this a BFF rather than a public API.
+// server on localhost. Keeping it out of production is what keeps this a backend for one frontend
+// rather than a public API.
 const string DevCorsPolicy = "BlazorDevServer";
 builder.Services.AddCors(options => options.AddPolicy(DevCorsPolicy, policy => policy
   .WithOrigins("http://localhost:5173", "https://localhost:5174")
@@ -102,5 +103,5 @@ static string ResolveConnectionString(IConfiguration configuration)
   return $"Host={host};Port={port};Database={database};Username={user};Password={password}";
 }
 
-/// <summary>Exposed so the BFF test project can drive the app through <c>WebApplicationFactory</c>.</summary>
+/// <summary>Exposed so the API test project can drive the app through <c>WebApplicationFactory</c>.</summary>
 public partial class Program;
