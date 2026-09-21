@@ -1,0 +1,3 @@
+# Private keys and certificates are generated per machine and never committed.
+*
+!.gitignore

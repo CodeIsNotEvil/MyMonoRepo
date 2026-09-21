@@ -1,0 +1,340 @@
+@page "/"
+@implements IDisposable
+@inject GroceryDataService Data
+@inject SyncEngine Sync
+@inject NavigationManager Nav
+
+<PageTitle>Dashboard · Grocery Tracker</PageTitle>
+
+<h1>Spending</h1>
+
+<div class="segmented mt-1" role="group" aria-label="Time range">
+    @foreach (var option in RangeOptions)
+    {
+        <button type="button" class="@(option.Months == _months ? "active" : null)"
+                @onclick="() => ChangeRangeAsync(option.Months)">@option.Label</button>
+    }
+</div>
+
+@if (_loading)
+{
+    <p class="muted mt-2">Loading…</p>
+}
+else if (_summary is null)
+{
+    <p class="muted mt-2">No data yet.</p>
+}
+else
+{
+    <div class="tiles mt-2">
+        <div class="tile">
+            <div class="tile-label">Total spend</div>
+            <div class="tile-value">@Money.Format(_summary.TotalSpend, Currency)</div>
+            <div class="tile-note">@RangeLabel</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">vs previous</div>
+            <div class="tile-value @TrendClass">@TrendText</div>
+            <div class="tile-note">was @Money.Format(_summary.PreviousPeriodSpend, Currency)</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">Year to date</div>
+            <div class="tile-value">@Money.Format(_summary.YearToDateSpend, Currency)</div>
+            <div class="tile-note">since 1 Jan @To.Year</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">Per month</div>
+            <div class="tile-value">@(_summary.AverageMonthlyMonths == 0 ? "—" : Money.Format(_summary.AverageMonthlySpend, Currency))</div>
+            <div class="tile-note">@MonthlyAverageNote</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">Trips</div>
+            <div class="tile-value">@_summary.TripCount</div>
+            <div class="tile-note">shopping trips</div>
+        </div>
+        <div class="tile">
+            <div class="tile-label">Average basket</div>
+            <div class="tile-value">@Money.Format(_summary.AverageTripAmount, Currency)</div>
+            <div class="tile-note">per trip</div>
+        </div>
+    </div>
+
+    <section class="card">
+        <div class="card-header">
+            <h2>Spend over time</h2>
+            <div class="spacer"></div>
+            @if (IsThisMonth)
+            {
+                <span class="text-sm muted">per day</span>
+            }
+            else
+            {
+                <div class="segmented" role="group" aria-label="Granularity">
+                    <button type="button" class="@(_granularity == SpendGranularity.Week ? "active" : null)"
+                            @onclick="() => ChangeGranularityAsync(SpendGranularity.Week)">Weekly</button>
+                    <button type="button" class="@(_granularity == SpendGranularity.Month ? "active" : null)"
+                            @onclick="() => ChangeGranularityAsync(SpendGranularity.Month)">Monthly</button>
+                </div>
+            }
+        </div>
+
+        <BarChart Points="@ChartPoints" AriaLabel="@($"Grocery spend per {Granularity.ToString().ToLowerInvariant()}")" />
+    </section>
+
+    @if (IsThisMonth)
+    {
+        <section class="card">
+            <div class="card-header">
+                <h2>Every entry</h2>
+                <span class="spacer amount">@Money.Format(_entries.Sum(t => t.TotalAmount), Currency)</span>
+            </div>
+
+            @if (_entries.Count == 0)
+            {
+                <p class="muted text-sm mb-0">Nothing bought yet in @To.ToString("MMMM", CultureInfo.InvariantCulture).</p>
+            }
+            else
+            {
+                <ul class="list">
+                    @foreach (var trip in _entries)
+                    {
+                        <li class="list-row" style="cursor:pointer;" @onclick="() => Edit(trip.Id)">
+                            <div class="grow">
+                                <div class="row-title">@StoreName(trip.StoreId)</div>
+                                <div class="row-sub">@EntrySubtitle(trip)</div>
+                            </div>
+                            <span class="amount">@Money.Format(trip.TotalAmount, Currency)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+
+    <section class="card">
+        <div class="card-header"><h2>By category</h2></div>
+
+        @if (_summary.ByCategory.Count == 0)
+        {
+            <p class="muted text-sm mb-0">Add line items to a trip to see a category split.</p>
+        }
+        else
+        {
+            <ul class="list">
+                @foreach (var slice in _summary.ByCategory)
+                {
+                    <li class="list-row">
+                        <span class="swatch" style="background:@slice.ColorHex" aria-hidden="true"></span>
+                        <div class="grow">
+                            <div class="row-title">@slice.Name</div>
+                            <div class="meter mt-1">
+                                <span style="width:@Percent(slice.Share); background:@slice.ColorHex"></span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="amount">@Money.Format(slice.Amount, Currency)</div>
+                            <div class="row-sub">@slice.Share.ToString("0.#", CultureInfo.InvariantCulture)%</div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section class="card">
+        <div class="card-header"><h2>By store</h2></div>
+
+        @if (_summary.ByStore.Count == 0)
+        {
+            <p class="muted text-sm mb-0">No trips in this period.</p>
+        }
+        else
+        {
+            <ul class="list">
+                @foreach (var slice in _summary.ByStore)
+                {
+                    <li class="list-row">
+                        <div class="grow">
+                            <div class="row-title">@slice.Name</div>
+                            <div class="row-sub">@slice.TripCount trip@(slice.TripCount == 1 ? "" : "s") · @slice.Share.ToString("0.#", CultureInfo.InvariantCulture)%</div>
+                        </div>
+                        <span class="amount">@Money.Format(slice.Amount, Currency)</span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    @if (_summary.TopItems.Count > 0)
+    {
+        <section class="card">
+            <div class="card-header"><h2>Most expensive items</h2></div>
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th scope="col">Item</th>
+                        <th scope="col" class="num">Times</th>
+                        <th scope="col" class="num">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _summary.TopItems)
+                    {
+                        <tr>
+                            <td>@item.Description</td>
+                            <td class="num">@item.Occurrences</td>
+                            <td class="num">@Money.Format(item.TotalAmount, Currency)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    }
+
+    @if (_summary.TripCount == 0 && _summary.PreviousPeriodSpend == 0m)
+    {
+        <div class="empty">
+            <p>No trips recorded yet.</p>
+            <button class="btn btn-primary" @onclick="@(() => Nav.NavigateTo("trips/new"))">Log your first trip</button>
+        </div>
+    }
+}
+
+@code {
+  private static readonly (int Months, string Label)[] RangeOptions =
+  [
+    (1, "This month"),
+    (3, "3 months"),
+    (6, "6 months"),
+    (12, "12 months"),
+  ];
+
+  private SpendSummary? _summary;
+  private Household? _household;
+  private List<ShoppingTrip> _entries = [];
+  private Dictionary<Guid, string> _stores = [];
+  private Dictionary<Guid, string> _members = [];
+  private bool _loading = true;
+  private int _months = 6;
+  private SpendGranularity _granularity = SpendGranularity.Month;
+
+  private string Currency => _household?.CurrencyCode ?? "EUR";
+
+  /// <summary>The current month is shown entry by entry, so a week or month bucket makes no sense.</summary>
+  private bool IsThisMonth => _months == 1;
+
+  private SpendGranularity Granularity => IsThisMonth ? SpendGranularity.Day : _granularity;
+
+  private DateOnly To => DateOnly.FromDateTime(DateTime.Now);
+
+  private DateOnly From
+  {
+    get
+    {
+      var start = To.AddMonths(-(_months - 1));
+      return new DateOnly(start.Year, start.Month, 1);
+    }
+  }
+
+  private string RangeLabel => IsThisMonth
+    ? To.ToString("MMMM yyyy", CultureInfo.InvariantCulture)
+    : $"{From:MMM yyyy} – {To:MMM yyyy}";
+
+  private string MonthlyAverageNote => _summary?.AverageMonthlyMonths switch
+  {
+    null or 0 => "after a full month",
+    1 => "average of 1 full month",
+    var months => $"average of {months} full months",
+  };
+
+  private IReadOnlyList<BarChart.Bar> ChartPoints => _summary is null
+    ? []
+    : _summary.Series
+      .Select(p => new BarChart.Bar(p.Label, p.Amount, Money.FormatCompact(p.Amount, Currency)))
+      .ToList();
+
+  private string TrendText => _summary?.ChangeVsPreviousPct is { } pct
+    ? $"{(pct > 0 ? "+" : string.Empty)}{pct.ToString("0.#", CultureInfo.InvariantCulture)}%"
+    : "—";
+
+  // Spending more is the unwelcome direction here, so up is flagged and down is reassuring.
+  private string TrendClass => _summary?.ChangeVsPreviousPct switch
+  {
+    > 0 => "trend-up",
+    < 0 => "trend-down",
+    _ => string.Empty,
+  };
+
+  protected override async Task OnInitializedAsync()
+  {
+    Sync.Changed += OnSyncChanged;
+    await LoadAsync();
+  }
+
+  private async Task LoadAsync()
+  {
+    _loading = true;
+    _household = await Data.GetHouseholdAsync();
+    _summary = await Data.GetSummaryAsync(From, To, Granularity);
+
+    if (IsThisMonth)
+    {
+      _stores = (await Data.GetStoresAsync()).ToDictionary(s => s.Id, s => s.Name);
+      _members = (await Data.GetMembersAsync()).ToDictionary(m => m.Id, m => m.DisplayName);
+      _entries = (await Data.GetTripsAsync())
+        .Where(t => t.PurchasedOn >= From && t.PurchasedOn <= To)
+        .ToList();
+    }
+
+    _loading = false;
+  }
+
+  private void Edit(Guid tripId) => Nav.NavigateTo($"trips/{tripId}");
+
+  // A trip can outlive the store it points at if another device retired that store.
+  private string StoreName(Guid storeId) => _stores.GetValueOrDefault(storeId, "Unknown store");
+
+  private string EntrySubtitle(ShoppingTrip trip)
+  {
+    var parts = new List<string> { trip.PurchasedOn.ToString("ddd d MMM", CultureInfo.InvariantCulture) };
+
+    if (trip.PaidByMemberId is { } payer && _members.TryGetValue(payer, out var payerName))
+    {
+      parts.Add(payerName);
+    }
+
+    if (!string.IsNullOrWhiteSpace(trip.Note))
+    {
+      parts.Add(trip.Note);
+    }
+
+    return string.Join(" · ", parts);
+  }
+
+  private async Task ChangeRangeAsync(int months)
+  {
+    _months = months;
+    await LoadAsync();
+  }
+
+  private async Task ChangeGranularityAsync(SpendGranularity granularity)
+  {
+    _granularity = granularity;
+    await LoadAsync();
+  }
+
+  private static string Percent(decimal share) =>
+    $"{Math.Clamp(share, 0m, 100m).ToString("0.#", CultureInfo.InvariantCulture)}%";
+
+  // A completed sync can bring in trips from another device, so the figures are recalculated.
+  private void OnSyncChanged() => InvokeAsync(async () =>
+  {
+    if (Sync.Status is SyncStatus.Idle && !_loading)
+    {
+      await LoadAsync();
+      StateHasChanged();
+    }
+  });
+
+  public void Dispose() => Sync.Changed -= OnSyncChanged;
+}

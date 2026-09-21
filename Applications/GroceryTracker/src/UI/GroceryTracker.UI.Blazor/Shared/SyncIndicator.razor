@@ -1,0 +1,39 @@
+@implements IDisposable
+@inject SyncEngine Sync
+
+<button class="badge @BadgeClass" @onclick="SyncNowAsync" disabled="@(Sync.Status == SyncStatus.Syncing)"
+        title="@Tooltip" style="cursor:pointer;">
+    <span class="dot" aria-hidden="true"></span>
+    <span>@Label</span>
+</button>
+
+@code {
+  private string Label => Sync.Status switch
+  {
+    SyncStatus.Syncing => "Syncing",
+    SyncStatus.Offline => Sync.PendingCount > 0 ? $"Offline · {Sync.PendingCount}" : "Offline",
+    SyncStatus.Failed => "Sync error",
+    SyncStatus.ServerReset => "Server reset",
+    _ => Sync.PendingCount > 0 ? $"Pending {Sync.PendingCount}" : "Synced",
+  };
+
+  private string BadgeClass => Sync.Status switch
+  {
+    SyncStatus.Offline => "badge-warning",
+    SyncStatus.Failed => "badge-critical",
+    SyncStatus.ServerReset => "badge-critical",
+    _ => Sync.PendingCount > 0 ? "badge-warning" : "badge-good",
+  };
+
+  private string Tooltip => Sync.LastSyncUtc is { } last
+    ? $"Last synced {last.ToLocalTime():g}. Tap to sync now."
+    : "Not synced yet. Tap to sync now.";
+
+  protected override void OnInitialized() => Sync.Changed += OnChanged;
+
+  private async Task SyncNowAsync() => await Sync.SyncAsync();
+
+  private void OnChanged() => InvokeAsync(StateHasChanged);
+
+  public void Dispose() => Sync.Changed -= OnChanged;
+}

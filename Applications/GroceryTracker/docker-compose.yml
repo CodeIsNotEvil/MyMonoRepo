@@ -1,0 +1,87 @@
+# Full stack for the Raspberry Pi. All images are multi-arch, so this builds on arm64 unchanged.
+#
+#   cp .env.example .env   # then edit the password
+#   docker compose up -d --build
+#
+# Podman works identically — run `podman compose` instead of `docker compose` everywhere (never a
+# bare `docker-compose`, which won't know where Podman's socket is). See the README for setup.
+#
+# The browser only ever talks to the `web` service: it serves the Blazor app and proxies /api to the
+# API, which keeps everything on one origin and leaves PostgreSQL off the network entirely.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-grocerytracker}
+    volumes:
+      - grocerytracker-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-grocerytracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Deliberately not published to the host: nothing outside this stack needs the database.
+    expose:
+      - "5432"
+
+  migration-runner:
+    build:
+      context: .
+      dockerfile: src/MigrationRunner/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-grocerytracker}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migration-runner:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_URLS: http://+:5000
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-grocerytracker};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+    expose:
+      - "5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      dockerfile: src/UI/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "${WEB_PORT:-8080}:80"
+      # HTTPS, which an installed PWA needs before it will register a service worker. Serving it
+      # requires a certificate in deploy/certs; without one the container simply stays on HTTP.
+      - "${WEB_TLS_PORT:-8443}:443"
+    volumes:
+      - ./deploy/certs:/etc/nginx/certs:ro
+
+volumes:
+  grocerytracker-postgres-data:
+    driver: local

@@ -1,0 +1,326 @@
+@page "/trips/new"
+@page "/trips/{Id:guid}"
+@inject GroceryDataService Data
+@inject NavigationManager Nav
+
+<PageTitle>@(IsNew ? "New trip" : "Edit trip") · Grocery Tracker</PageTitle>
+
+<h1>@(IsNew ? "New trip" : "Edit trip")</h1>
+
+@if (_loading)
+{
+    <p class="muted">Loading…</p>
+}
+else if (_household is null)
+{
+    @* Without a household the trip has no tenant to belong to, and inventing one here would
+       collide with the server's on the next sync. *@
+    <div class="alert alert-info">
+        This device has not synced yet. Connect to your server once, then you can add trips offline.
+    </div>
+}
+else
+{
+    <section class="card">
+        <div class="field">
+            <label for="store">Store</label>
+            @if (_stores.Count == 0 || _addingStore)
+            {
+                <div class="field-row">
+                    <input id="store" @bind="_newStoreName" @bind:event="oninput" placeholder="e.g. Aldi" />
+                    <button class="btn btn-primary" style="flex:0 0 auto;"
+                            disabled="@string.IsNullOrWhiteSpace(_newStoreName)"
+                            @onclick="AddStoreAsync">Add</button>
+                </div>
+                @if (_stores.Count > 0)
+                {
+                    <button class="btn btn-sm btn-ghost mt-1" @onclick="() => _addingStore = false">Cancel</button>
+                }
+            }
+            else
+            {
+                <div class="field-row">
+                    <select id="store" @bind="_trip.StoreId">
+                        @foreach (var store in _stores)
+                        {
+                            <option value="@store.Id">@store.Name</option>
+                        }
+                    </select>
+                    <button class="btn btn-ghost" style="flex:0 0 auto;" @onclick="() => _addingStore = true">New</button>
+                </div>
+            }
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="date">Date</label>
+                <input id="date" type="date" @bind="_purchasedOn" />
+            </div>
+            <div class="field">
+                <label for="total">Total paid</label>
+                <input id="total" type="number" step="0.01" inputmode="decimal" @bind="_trip.TotalAmount" />
+            </div>
+        </div>
+
+        @if (_members.Count > 0)
+        {
+            <div class="field">
+                <label for="member">Paid by</label>
+                <select id="member" @bind="_paidBy">
+                    <option value="">Nobody in particular</option>
+                    @foreach (var member in _members)
+                    {
+                        <option value="@member.Id">@member.DisplayName</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <div class="field">
+            <label for="note">Note <span class="muted">(optional)</span></label>
+            <input id="note" @bind="_trip.Note" placeholder="Weekly shop" maxlength="500" />
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-header">
+            <h2>Line items</h2>
+            <span class="spacer text-sm muted">optional</span>
+        </div>
+
+        <p class="text-sm muted">
+            The total above is what counts as spend. Items just split it across categories —
+            anything you do not itemise shows up as uncategorised. The first item starts out as the
+            whole total@(_defaultCategory is null ? "" : " under " + _defaultCategory.Name).
+        </p>
+
+        @foreach (var item in _items)
+        {
+            <div class="field-row mt-1" style="align-items:flex-start;">
+                <input placeholder="Description" @bind="item.Description" maxlength="200" style="flex:2;" />
+                <input type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00"
+                       @bind="item.Amount" style="flex:1;" aria-label="Amount" />
+                <select @bind="item.CategoryId" style="flex:1.4;" aria-label="Category">
+                    <option value="">Uncategorised</option>
+                    @foreach (var category in _categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
+                <button class="btn btn-sm btn-ghost" style="flex:0 0 auto;" title="Remove item"
+                        @onclick="() => _items.Remove(item)">✕</button>
+            </div>
+        }
+
+        <button class="btn btn-ghost btn-sm mt-2" @onclick="AddItem">+ Add item</button>
+
+        @if (_items.Count > 0)
+        {
+            <p class="text-sm mt-2 mb-0">
+                Itemised: <strong>@Money.Format(ItemisedTotal, Currency)</strong>
+                @if (Unallocated > 0m)
+                {
+                    <span class="muted">· @Money.Format(Unallocated, Currency) uncategorised</span>
+                }
+                else if (Unallocated < 0m)
+                {
+                    <span class="trend-up">· @Money.Format(-Unallocated, Currency) over the receipt total</span>
+                }
+            </p>
+        }
+    </section>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger">@_error</div>
+    }
+
+    <div class="btn-row">
+        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">Save trip</button>
+        <button class="btn btn-ghost" @onclick="@(() => Nav.NavigateTo("trips"))">Cancel</button>
+        @if (!IsNew)
+        {
+            <button class="btn btn-danger" style="margin-left:auto;" @onclick="DeleteAsync" disabled="@_saving">Delete</button>
+        }
+    </div>
+}
+
+@code {
+  [Parameter]
+  public Guid? Id { get; set; }
+
+  private ShoppingTrip _trip = new();
+  private Category? _defaultCategory;
+  private List<ExpenseItem> _items = [];
+  private List<Store> _stores = [];
+  private List<Category> _categories = [];
+  private List<Member> _members = [];
+  private Household? _household;
+
+  private DateTime _purchasedOn = DateTime.Today;
+  private string? _paidBy;
+  private string? _newStoreName;
+  private bool _addingStore;
+  private bool _loading = true;
+  private bool _saving;
+  private string? _error;
+
+  private bool IsNew => Id is null;
+
+  private string Currency => _household?.CurrencyCode ?? "EUR";
+
+  private decimal ItemisedTotal => _items.Sum(i => i.Amount);
+
+  private decimal Unallocated => _trip.TotalAmount - ItemisedTotal;
+
+  protected override async Task OnParametersSetAsync()
+  {
+    _loading = true;
+
+    _household = await Data.GetHouseholdAsync();
+    _stores = await Data.GetStoresAsync();
+    _categories = await Data.GetCategoriesAsync();
+    _members = await Data.GetMembersAsync();
+    _defaultCategory = await Data.GetDefaultCategoryAsync();
+
+    if (_household is not null)
+    {
+      if (Id is { } tripId)
+      {
+        var existing = await Data.GetTripAsync(tripId);
+
+        if (existing is null)
+        {
+          Nav.NavigateTo("trips");
+          return;
+        }
+
+        _trip = existing;
+        _items = existing.Items.ToList();
+        _purchasedOn = existing.PurchasedOn.ToDateTime(TimeOnly.MinValue);
+        _paidBy = existing.PaidByMemberId?.ToString();
+      }
+      else
+      {
+        _trip = new ShoppingTrip
+        {
+          HouseholdId = _household.Id,
+          StoreId = _stores.FirstOrDefault()?.Id ?? Guid.Empty,
+        };
+        _items = [];
+        _purchasedOn = DateTime.Today;
+
+        var remembered = await Data.GetDefaultPayerIdAsync();
+        _paidBy = remembered is { } payer && _members.Any(m => m.Id == payer) ? payer.ToString() : null;
+      }
+    }
+
+    _loading = false;
+  }
+
+  /// <summary>
+  /// The first item opens with the whole receipt under Groceries, because that is what most trips
+  /// are. Splitting it means editing the amount down and adding a second item.
+  /// </summary>
+  private void AddItem()
+  {
+    var isFirst = _items.Count == 0;
+
+    _items.Add(new ExpenseItem
+    {
+      HouseholdId = _household!.Id,
+      TripId = _trip.Id,
+      Amount = isFirst ? _trip.TotalAmount : 0m,
+      CategoryId = isFirst ? _defaultCategory?.Id : null,
+    });
+  }
+
+
+
+  private async Task AddStoreAsync()
+  {
+    if (string.IsNullOrWhiteSpace(_newStoreName))
+    {
+      return;
+    }
+
+    var store = new Store { Name = _newStoreName.Trim(), HouseholdId = _household!.Id };
+    await Data.SaveStoreAsync(store);
+
+    _stores = await Data.GetStoresAsync();
+    _trip.StoreId = store.Id;
+    _newStoreName = null;
+    _addingStore = false;
+  }
+
+  private async Task SaveAsync()
+  {
+    _error = Validate();
+    if (_error is not null)
+    {
+      return;
+    }
+
+    _saving = true;
+
+    try
+    {
+      _trip.HouseholdId = _household!.Id;
+      _trip.PurchasedOn = DateOnly.FromDateTime(_purchasedOn);
+      _trip.PaidByMemberId = Guid.TryParse(_paidBy, out var memberId) ? memberId : null;
+
+      if (_members.Count > 0)
+      {
+        await Data.SetDefaultPayerIdAsync(_trip.PaidByMemberId);
+      }
+
+      await Data.SetDefaultCategoryIdAsync(_items.FirstOrDefault()?.CategoryId);
+
+      var items = _items
+        .Where(i => !string.IsNullOrWhiteSpace(i.Description) || i.Amount != 0m)
+        .ToList();
+
+      await Data.SaveTripAsync(_trip, items);
+      Nav.NavigateTo("trips");
+    }
+    catch (Exception ex)
+    {
+      _error = $"Could not save the trip: {ex.Message}";
+    }
+    finally
+    {
+      _saving = false;
+    }
+  }
+
+  private string? Validate()
+  {
+    if (_trip.StoreId == Guid.Empty)
+    {
+      return "Pick a store first.";
+    }
+
+    // Not "must be positive": an imported refund is a trip with a negative total.
+    if (_trip.TotalAmount == 0m)
+    {
+      return "Enter what the trip cost.";
+    }
+
+    return null;
+  }
+
+  private async Task DeleteAsync()
+  {
+    _saving = true;
+
+    try
+    {
+      await Data.DeleteTripAsync(_trip);
+      Nav.NavigateTo("trips");
+    }
+    finally
+    {
+      _saving = false;
+    }
+  }
+}

@@ -1,0 +1,42 @@
+# Publishes the Blazor WebAssembly app and serves the static output from nginx, which is what
+# actually runs on the Pi. The API is reached through this same nginx, so the browser only ever
+# talks to one origin.
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.csproj src/UI/GroceryTracker.UI.Blazor/
+COPY src/Contracts/GroceryTracker.Contracts.csproj src/Contracts/
+COPY src/Domain/GroceryTracker.Domain.csproj src/Domain/
+
+RUN dotnet restore src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.csproj
+
+COPY src/ src/
+
+# Release publish is what generates service-worker-assets.js and the fingerprinted asset names the
+# offline cache relies on; a Debug build would ship the no-op development service worker.
+RUN dotnet publish src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.csproj \
+      -c Release -o /app/publish --no-restore
+
+FROM nginx:alpine
+COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
+
+# A .template file in /etc/nginx/templates/ is rendered to /etc/nginx/conf.d/ by the base image's
+# own entrypoint (via envsubst) on every container start, which is what lets ${NGINX_LOCAL_RESOLVERS}
+# below pick up this container's *current* DNS resolver rather than a value baked in at build time.
+COPY deploy/nginx/grocerytracker.container.conf.template /etc/nginx/templates/default.conf.template
+
+# The shared body of both server blocks, plus the HTTPS block and the script that enables it. The
+# TLS template stays out of /etc/nginx/templates on purpose: anything in there is rendered into
+# conf.d unconditionally, and an HTTPS block without a certificate stops nginx from starting.
+COPY deploy/nginx/app-common.conf /etc/nginx/grocerytracker/app-common.conf
+COPY deploy/nginx/tls-server.conf.template /etc/nginx/grocerytracker/tls-server.conf.template
+COPY deploy/nginx/30-grocerytracker-tls.sh /docker-entrypoint.d/30-grocerytracker-tls.sh
+RUN chmod +x /docker-entrypoint.d/30-grocerytracker-tls.sh
+
+# Turns on the base image's own local-resolver detection (a stock entrypoint script, gated behind
+# this var), which the template's `resolver` directive needs so nginx re-resolves the `api`
+# container's address instead of caching whatever it was on nginx's first request to it.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+
+EXPOSE 80 443

@@ -1,0 +1,404 @@
+@page "/balance"
+@using GroceryTracker.Domain.Balance
+@implements IDisposable
+@inject GroceryDataService Data
+@inject SyncEngine Sync
+@inject NavigationManager Nav
+
+<PageTitle>Balance · Grocery Tracker</PageTitle>
+
+<h1>Balance</h1>
+
+@if (_loading)
+{
+    <p class="muted">Loading…</p>
+}
+else if (_members.Count < 2)
+{
+    <div class="empty">
+        <p>Balancing needs at least two people. Add everyone who shares the groceries, or import a CSV and assign its columns to people.</p>
+        <div class="btn-row" style="justify-content:center;">
+            <button class="btn btn-primary" @onclick="@(() => Nav.NavigateTo("manage"))">Add people</button>
+            <button class="btn btn-ghost" @onclick="@(() => Nav.NavigateTo("import"))">Import a CSV</button>
+        </div>
+    </div>
+}
+else
+{
+    <section class="card">
+        <div class="field mb-0">
+            <label for="me">This device belongs to</label>
+            <select id="me" value="@(_me?.ToString() ?? string.Empty)" @onchange="OnMeChangedAsync">
+                <option value="">Not set</option>
+                @foreach (var member in _members)
+                {
+                    <option value="@member.Id">@member.DisplayName</option>
+                }
+            </select>
+        </div>
+    </section>
+
+    <section class="card">
+        @if (_summary.IsSettled)
+        {
+            <div class="tile-label">Settle up</div>
+            <div class="tile-value">All settled</div>
+            <p class="text-sm muted mb-0 mt-1">Nobody owes anybody anything.</p>
+        }
+        else if (MyBalance is not null)
+        {
+            @if (MyPayments.Count > 0)
+            {
+                <div class="tile-label">You owe</div>
+                <div class="tile-value balance-neg">@Money.Format(MyPayments.Sum(t => t.Amount), _currency)</div>
+            }
+            else if (MyReceipts.Count > 0)
+            {
+                <div class="tile-label">You are owed</div>
+                <div class="tile-value balance-pos">@Money.Format(MyReceipts.Sum(t => t.Amount), _currency)</div>
+            }
+            else
+            {
+                <div class="tile-label">Settle up</div>
+                <div class="tile-value">You are square</div>
+            }
+
+            @if (MyPayments.Count > 0 || MyReceipts.Count > 0)
+            {
+                <ul class="list mt-1">
+                    @foreach (var transfer in MyPayments)
+                    {
+                        <li class="list-row">
+                            <div class="grow"><span class="row-title">Pay @transfer.ToName</span></div>
+                            <span class="amount">@Money.Format(transfer.Amount, _currency)</span>
+                            <button class="btn btn-sm btn-primary" @onclick="() => MarkPaidAsync(transfer)" disabled="@_saving">Mark as paid</button>
+                        </li>
+                    }
+                    @foreach (var transfer in MyReceipts)
+                    {
+                        <li class="list-row">
+                            <div class="grow"><span class="row-title">@transfer.FromName owes you</span></div>
+                            <span class="amount">@Money.Format(transfer.Amount, _currency)</span>
+                            <button class="btn btn-sm btn-ghost" @onclick="() => MarkPaidAsync(transfer)" disabled="@_saving">Received</button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (OtherTransfers.Count > 0)
+            {
+                <div class="text-sm muted mt-2">Between the others</div>
+                <ul class="list">
+                    @foreach (var transfer in OtherTransfers)
+                    {
+                        <li class="list-row">
+                            <div class="grow">@transfer.FromName pays @transfer.ToName</div>
+                            <span class="amount">@Money.Format(transfer.Amount, _currency)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+        else
+        {
+            <div class="tile-label">To settle up</div>
+            <ul class="list">
+                @foreach (var transfer in _summary.Transfers)
+                {
+                    <li class="list-row">
+                        <div class="grow"><span class="row-title">@transfer.FromName</span> pays <span class="row-title">@transfer.ToName</span></div>
+                        <span class="amount">@Money.Format(transfer.Amount, _currency)</span>
+                        <button class="btn btn-sm btn-primary" @onclick="() => MarkPaidAsync(transfer)" disabled="@_saving">Mark as paid</button>
+                    </li>
+                }
+            </ul>
+            <p class="text-sm muted mb-0">Choose who this device belongs to for a summary just about you.</p>
+        }
+    </section>
+
+    @if (_summary.UnassignedCount > 0)
+    {
+        <div class="alert alert-warning">
+            <strong>@Money.Format(_summary.UnassignedTotal, _currency)</strong> across
+            @_summary.UnassignedCount trip@(_summary.UnassignedCount == 1 ? "" : "s") has nobody recorded as the payer,
+            so it is <strong>not counted</strong> here. Assign the payer on each trip, or re-import your CSV with people chosen.
+        </div>
+    }
+
+    <section class="card">
+        <div class="card-header">
+            <h2>Everyone</h2>
+            <span class="spacer text-sm muted">@Money.Format(_summary.TotalAssigned, _currency) shared</span>
+        </div>
+
+        <ul class="list">
+            @foreach (var person in _summary.Members)
+            {
+                <li class="list-row">
+                    <div class="grow">
+                        <div class="row-title">@person.Name</div>
+                        <div class="row-sub">
+                            Paid @Money.Format(person.Paid, _currency) · share @Money.Format(person.FairShare, _currency) (@(person.SharePercent.ToString("0.##", CultureInfo.InvariantCulture)) %)
+                            @if (person.TransfersSent != 0m || person.TransfersReceived != 0m)
+                            {
+                                <span> · sent @Money.Format(person.TransfersSent, _currency), received @Money.Format(person.TransfersReceived, _currency)</span>
+                            }
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="amount @BalanceClass(person.Balance)">@Money.Format(Math.Abs(person.Balance), _currency)</div>
+                        <div class="row-sub">@BalanceLabel(person.Balance)</div>
+                    </div>
+                </li>
+            }
+        </ul>
+
+        <p class="text-sm muted mt-1 mb-0">
+            @if (_summary.Members.Select(m => m.ShareWeight).Distinct().Count() <= 1)
+            {
+                <span>Everyone carries an equal share of what was paid.</span>
+            }
+            else
+            {
+                <span>Shares are not equal.</span>
+            }
+            Change them under <a href="manage">Manage</a>.
+        </p>
+    </section>
+
+    <section class="card">
+        <div class="card-header"><h2>Record a transfer</h2></div>
+        <p class="text-sm muted">Money one person handed another to even things out. It is not spending, so it never shows up on the dashboard.</p>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="from">From</label>
+                <select id="from" @bind="_from">
+                    @foreach (var member in _members)
+                    {
+                        <option value="@member.Id">@member.DisplayName</option>
+                    }
+                </select>
+            </div>
+            <div class="field">
+                <label for="to">To</label>
+                <select id="to" @bind="_to">
+                    @foreach (var member in _members)
+                    {
+                        <option value="@member.Id">@member.DisplayName</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="amount">Amount</label>
+                <input id="amount" type="number" step="0.01" min="0" inputmode="decimal" @bind="_amount" />
+            </div>
+            <div class="field">
+                <label for="date">Date</label>
+                <input id="date" type="date" @bind="_date" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="note">Note <span class="muted">(optional)</span></label>
+            <input id="note" @bind="_note" maxlength="500" />
+        </div>
+
+        @if (_formError is not null)
+        {
+            <div class="alert alert-danger">@_formError</div>
+        }
+
+        <button class="btn btn-primary" @onclick="SaveTransferAsync" disabled="@_saving">Save transfer</button>
+    </section>
+
+    @if (_settlements.Count > 0)
+    {
+        <section class="card">
+            <div class="card-header"><h2>Transfers</h2></div>
+            <ul class="list">
+                @foreach (var settlement in _settlements)
+                {
+                    <li class="list-row">
+                        <div class="grow">
+                            <div class="row-title">@NameOf(settlement.FromMemberId) → @NameOf(settlement.ToMemberId)</div>
+                            <div class="row-sub">
+                                @settlement.Date.ToString("d MMM yyyy", CultureInfo.InvariantCulture)
+                                @if (!string.IsNullOrWhiteSpace(settlement.Note))
+                                {
+                                    <span> · @settlement.Note</span>
+                                }
+                            </div>
+                        </div>
+                        <span class="amount">@Money.Format(settlement.Amount, _currency)</span>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteAsync(settlement)" disabled="@_saving">Remove</button>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+}
+
+@code {
+  private BalanceSummary _summary = BalanceSummary.Empty;
+  private List<Member> _members = [];
+  private List<Settlement> _settlements = [];
+  private Guid? _me;
+  private string _currency = "EUR";
+  private bool _loading = true;
+  private bool _saving;
+
+  private Guid _from;
+  private Guid _to;
+  private decimal _amount;
+  private DateTime _date = DateTime.Today;
+  private string? _note;
+  private string? _formError;
+
+  private MemberBalance? MyBalance => _me is { } id ? _summary.Members.FirstOrDefault(m => m.MemberId == id) : null;
+
+  private List<SuggestedTransfer> MyPayments =>
+    _summary.Transfers.Where(t => t.FromMemberId == _me).ToList();
+
+  private List<SuggestedTransfer> MyReceipts =>
+    _summary.Transfers.Where(t => t.ToMemberId == _me).ToList();
+
+  private List<SuggestedTransfer> OtherTransfers =>
+    _summary.Transfers.Where(t => t.FromMemberId != _me && t.ToMemberId != _me).ToList();
+
+  protected override async Task OnInitializedAsync()
+  {
+    Sync.Changed += OnSyncChanged;
+    await LoadAsync();
+  }
+
+  private async Task LoadAsync()
+  {
+    var household = await Data.GetHouseholdAsync();
+    _currency = household?.CurrencyCode ?? "EUR";
+    _members = await Data.GetMembersAsync();
+    _settlements = await Data.GetSettlementsAsync();
+    _summary = await Data.GetBalanceAsync();
+
+    var saved = await Data.GetCurrentMemberIdAsync();
+    _me = saved is { } id && _members.Any(m => m.Id == id) ? id : null;
+
+    // The form starts as "me, paying someone else", the most common thing to record.
+    if (_members.Count >= 2 && (_from == Guid.Empty || _to == Guid.Empty))
+    {
+      _from = _me ?? _members[0].Id;
+      _to = _members.First(m => m.Id != _from).Id;
+    }
+
+    _loading = false;
+  }
+
+  private async Task OnMeChangedAsync(ChangeEventArgs e)
+  {
+    _me = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+    await Data.SetCurrentMemberIdAsync(_me);
+  }
+
+  private async Task MarkPaidAsync(SuggestedTransfer transfer)
+  {
+    await SaveAsync(new Settlement
+    {
+      FromMemberId = transfer.FromMemberId,
+      ToMemberId = transfer.ToMemberId,
+      Amount = transfer.Amount,
+      Date = DateOnly.FromDateTime(DateTime.Today),
+      HouseholdId = (await Data.GetHouseholdAsync())!.Id,
+    });
+  }
+
+  private async Task SaveTransferAsync()
+  {
+    _formError = null;
+
+    if (_from == _to)
+    {
+      _formError = "Pick two different people.";
+      return;
+    }
+
+    if (_amount <= 0m)
+    {
+      _formError = "Enter how much was transferred.";
+      return;
+    }
+
+    await SaveAsync(new Settlement
+    {
+      FromMemberId = _from,
+      ToMemberId = _to,
+      Amount = decimal.Round(_amount, 2, MidpointRounding.AwayFromZero),
+      Date = DateOnly.FromDateTime(_date),
+      Note = string.IsNullOrWhiteSpace(_note) ? null : _note.Trim(),
+      HouseholdId = (await Data.GetHouseholdAsync())!.Id,
+    });
+
+    _amount = 0m;
+    _note = null;
+  }
+
+  private async Task SaveAsync(Settlement settlement)
+  {
+    _saving = true;
+
+    try
+    {
+      await Data.SaveSettlementAsync(settlement);
+      await LoadAsync();
+    }
+    finally
+    {
+      _saving = false;
+    }
+  }
+
+  private async Task DeleteAsync(Settlement settlement)
+  {
+    _saving = true;
+
+    try
+    {
+      await Data.DeleteSettlementAsync(settlement);
+      await LoadAsync();
+    }
+    finally
+    {
+      _saving = false;
+    }
+  }
+
+  private string NameOf(Guid memberId) =>
+    _members.FirstOrDefault(m => m.Id == memberId)?.DisplayName ?? "Someone removed";
+
+  private static string BalanceClass(decimal balance) => balance switch
+  {
+    > 0m => "balance-pos",
+    < 0m => "balance-neg",
+    _ => string.Empty,
+  };
+
+  private static string BalanceLabel(decimal balance) => balance switch
+  {
+    > 0m => "is owed",
+    < 0m => "owes",
+    _ => "square",
+  };
+
+  private void OnSyncChanged() => InvokeAsync(async () =>
+  {
+    if (Sync.Status is SyncStatus.Idle && !_saving)
+    {
+      await LoadAsync();
+      StateHasChanged();
+    }
+  });
+
+  public void Dispose() => Sync.Changed -= OnSyncChanged;
+}
