@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace GroceryTracker.Domain.Import;
+namespace CINE.GroceryTracker.Domain.Import;
 
 /// <summary>One grocery booking read from a spreadsheet export.</summary>
 /// <param name="Key">

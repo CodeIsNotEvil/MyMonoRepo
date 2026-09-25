@@ -1,8 +1,8 @@
-using GroceryTracker.Application.Analytics;
-using GroceryTracker.Domain.Analytics;
+using CINE.GroceryTracker.Application.Analytics;
+using CINE.GroceryTracker.Domain.Analytics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GroceryTracker.Api.Controllers;
+namespace CINE.GroceryTracker.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

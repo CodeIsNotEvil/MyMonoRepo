@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Domain.Sync;
 
-namespace GroceryTracker.Domain.Model;
+namespace CINE.GroceryTracker.Domain.Model;
 
 /// <summary>A grocery bucket such as Produce, Dairy or Household.</summary>
 public sealed class Category : ISyncEntity

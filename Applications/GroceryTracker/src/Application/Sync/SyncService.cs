@@ -1,12 +1,12 @@
 using System.Text.Json;
-using GroceryTracker.Contracts.Sync;
-using GroceryTracker.Domain.Model;
-using GroceryTracker.Domain.Sync;
-using GroceryTracker.Infrastructure.Data;
+using CINE.GroceryTracker.Contracts.Sync;
+using CINE.GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace GroceryTracker.Application.Sync;
+namespace CINE.GroceryTracker.Application.Sync;
 
 public interface ISyncService
 {

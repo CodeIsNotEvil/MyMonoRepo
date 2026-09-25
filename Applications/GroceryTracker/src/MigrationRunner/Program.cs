@@ -1,4 +1,4 @@
-using GroceryTracker.Infrastructure.Data;
+using CINE.GroceryTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 static string Env(string key, string fallback) =>

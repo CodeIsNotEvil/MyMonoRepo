@@ -1,8 +1,8 @@
-using GroceryTracker.Domain.Analytics;
-using GroceryTracker.Infrastructure.Data;
+using CINE.GroceryTracker.Domain.Analytics;
+using CINE.GroceryTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace GroceryTracker.Application.Analytics;
+namespace CINE.GroceryTracker.Application.Analytics;
 
 public interface IAnalyticsService
 {

@@ -1,8 +1,8 @@
-using GroceryTracker.Application.Sync;
-using GroceryTracker.Contracts.Sync;
+using CINE.GroceryTracker.Application.Sync;
+using CINE.GroceryTracker.Contracts.Sync;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GroceryTracker.Api.Controllers;
+namespace CINE.GroceryTracker.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

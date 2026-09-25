@@ -1,9 +1,9 @@
-using GroceryTracker.Application.Analytics;
-using GroceryTracker.Api.Controllers;
-using GroceryTracker.Domain.Analytics;
+using CINE.GroceryTracker.Application.Analytics;
+using CINE.GroceryTracker.Api.Controllers;
+using CINE.GroceryTracker.Domain.Analytics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GroceryTracker.Api.Tests;
+namespace CINE.GroceryTracker.Api.Tests;
 
 /// <summary>
 /// Covers the window the controller picks when the client does not supply one, and the guard

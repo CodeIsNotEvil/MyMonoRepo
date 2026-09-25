@@ -1,8 +1,8 @@
-using GroceryTracker.Contracts.Sync;
-using GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Contracts.Sync;
+using CINE.GroceryTracker.Domain.Model;
 using Microsoft.JSInterop;
 
-namespace GroceryTracker.UI.Blazor.Services;
+namespace CINE.GroceryTracker.UI.Blazor.Services;
 
 /// <summary>
 /// Typed access to the browser's IndexedDB cache and outbox.

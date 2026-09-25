@@ -1,4 +1,4 @@
-namespace GroceryTracker.Contracts.Sync;
+namespace CINE.GroceryTracker.Contracts.Sync;
 
 public enum SyncEntityType
 {

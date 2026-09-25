@@ -1,14 +1,14 @@
 using System.Text.Json;
-using GroceryTracker.Application.Households;
-using GroceryTracker.Application.Sync;
-using GroceryTracker.Contracts.Sync;
-using GroceryTracker.Domain.Sync;
-using GroceryTracker.Infrastructure.Data;
+using CINE.GroceryTracker.Application.Households;
+using CINE.GroceryTracker.Application.Sync;
+using CINE.GroceryTracker.Contracts.Sync;
+using CINE.GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace GroceryTracker.Application.Tests;
+namespace CINE.GroceryTracker.Application.Tests;
 
 /// <summary>Test clock so conflict tie-breaking can be driven deliberately.</summary>
 public sealed class StubTimeProvider(DateTimeOffset now) : TimeProvider

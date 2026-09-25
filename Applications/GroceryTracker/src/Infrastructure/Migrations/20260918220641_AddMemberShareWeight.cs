@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace GroceryTracker.Infrastructure.Migrations
+namespace CINE.GroceryTracker.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class AddMemberShareWeight : Migration

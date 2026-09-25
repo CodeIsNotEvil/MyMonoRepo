@@ -11,7 +11,11 @@ A personal monorepo of configs, scripts and learning projects. `main` is unprote
 - `Scripts/dotnet_project.sh` — the scaffolding script that generated the ShoppingManager layout (Api/Application/Domain/Infrastructure/UI + xUnit/bUnit test projects). Its paths are hardcoded to `~/Repositories/MyMonoRepo`.
 - `Applications/PlayGround/` is gitignored scratch space.
 
-Style comes from the root `.editorconfig`: 2-space indentation. Existing C# uses file-scoped namespaces and primary constructors, even though `.editorconfig` says block-scoped namespaces. Match the code. Comments explain *why* a decision was made, and there are many of them. Keep that density when you edit.
+Style comes from the root `.editorconfig`: 2-space indentation. Existing C# uses file-scoped namespaces and primary constructors, even though `.editorconfig` says block-scoped namespaces. Match the code.
+
+Every .NET application and library in the repo uses the root namespace `CINE` (`CINE.GroceryTracker.Domain`, not `GroceryTracker.Domain`). Each app sets it once in its own `Directory.Build.props` with `<RootNamespace>CINE.$(MSBuildProjectName)</RootNamespace>`. Project and assembly names stay unprefixed. The file lives inside the app directory because that directory is the container build context, and every Dockerfile has to `COPY Directory.Build.props ./`. Without it, Razor components compile into the wrong namespace.
+
+Comments explain *why* a decision was made, and there are many of them. Keep that density when you edit.
 
 ## Git workflow for Claude
 

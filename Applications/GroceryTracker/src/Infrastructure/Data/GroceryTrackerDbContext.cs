@@ -1,8 +1,8 @@
-using GroceryTracker.Domain.Model;
-using GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Domain.Sync;
 using Microsoft.EntityFrameworkCore;
 
-namespace GroceryTracker.Infrastructure.Data;
+namespace CINE.GroceryTracker.Infrastructure.Data;
 
 public class GroceryTrackerDbContext : DbContext
 {

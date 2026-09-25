@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Domain.Sync;
 
-namespace GroceryTracker.Domain.Model;
+namespace CINE.GroceryTracker.Domain.Model;
 
 /// <summary>A shop the household buys groceries from, e.g. Aldi or Rewe.</summary>
 public sealed class Store : ISyncEntity

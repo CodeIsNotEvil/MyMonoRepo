@@ -1,8 +1,8 @@
-using GroceryTracker.Domain.Model;
-using GroceryTracker.Infrastructure.Data;
+using CINE.GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace GroceryTracker.Application.Households;
+namespace CINE.GroceryTracker.Application.Households;
 
 public interface IHouseholdProvisioner
 {

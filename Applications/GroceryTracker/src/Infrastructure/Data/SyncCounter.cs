@@ -1,4 +1,4 @@
-namespace GroceryTracker.Infrastructure.Data;
+namespace CINE.GroceryTracker.Infrastructure.Data;
 
 /// <summary>
 /// Single-row table holding the household's global change counter.

@@ -1,5 +1,5 @@
-using GroceryTracker.UI.Blazor;
-using GroceryTracker.UI.Blazor.Services;
+using CINE.GroceryTracker.UI.Blazor;
+using CINE.GroceryTracker.UI.Blazor.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 

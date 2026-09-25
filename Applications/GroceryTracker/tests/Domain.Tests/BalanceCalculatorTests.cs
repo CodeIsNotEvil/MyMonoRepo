@@ -1,7 +1,7 @@
-using GroceryTracker.Domain.Balance;
-using GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Domain.Balance;
+using CINE.GroceryTracker.Domain.Model;
 
-namespace GroceryTracker.Domain.Tests;
+namespace CINE.GroceryTracker.Domain.Tests;
 
 public class BalanceCalculatorTests
 {

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace GroceryTracker.UI.Blazor.Services;
+namespace CINE.GroceryTracker.UI.Blazor.Services;
 
 /// <summary>
 /// Serializer settings for talking to the API.

@@ -1,4 +1,4 @@
-namespace GroceryTracker.Domain.Sync;
+namespace CINE.GroceryTracker.Domain.Sync;
 
 /// <summary>
 /// Implemented by every entity that participates in offline synchronisation.

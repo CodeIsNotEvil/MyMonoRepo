@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Domain.Sync;
 
-namespace GroceryTracker.Domain.Model;
+namespace CINE.GroceryTracker.Domain.Model;
 
 /// <summary>An optional line on a receipt, used to attribute part of a trip to a category.</summary>
 public sealed class ExpenseItem : ISyncEntity

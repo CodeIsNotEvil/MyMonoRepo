@@ -2,6 +2,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# Sets the CINE.* root namespace. It sits outside src/, so without this the Razor components
+# would compile into the unprefixed namespace and the build breaks on _Imports.razor.
+COPY Directory.Build.props ./
+
 # Project files first: this layer only changes when a dependency changes, so the restore stays
 # cached across ordinary code edits. That matters when building on a Pi.
 COPY src/Api/GroceryTracker.Api.csproj src/Api/

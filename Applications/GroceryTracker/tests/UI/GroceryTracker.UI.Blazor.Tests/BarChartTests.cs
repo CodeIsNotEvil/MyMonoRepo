@@ -1,7 +1,7 @@
 using Bunit;
-using GroceryTracker.UI.Blazor.Shared;
+using CINE.GroceryTracker.UI.Blazor.Shared;
 
-namespace GroceryTracker.UI.Blazor.Tests;
+namespace CINE.GroceryTracker.UI.Blazor.Tests;
 
 /// <summary>
 /// The chart is hand-rolled SVG, so these cover the geometry that would otherwise only be caught

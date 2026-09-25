@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 
-namespace GroceryTracker.UI.Blazor.Services;
+namespace CINE.GroceryTracker.UI.Blazor.Services;
 
 /// <summary>
 /// Tracks whether the browser thinks it has a network, and raises an event when that flips.

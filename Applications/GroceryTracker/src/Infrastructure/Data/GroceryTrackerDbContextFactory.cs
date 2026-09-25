@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace GroceryTracker.Infrastructure.Data;
+namespace CINE.GroceryTracker.Infrastructure.Data;
 
 /// <summary>
 /// Lets `dotnet ef migrations add` build the model without starting the web host. That matters

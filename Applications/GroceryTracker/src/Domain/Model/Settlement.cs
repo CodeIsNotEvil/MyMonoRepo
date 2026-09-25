@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Domain.Sync;
 
-namespace GroceryTracker.Domain.Model;
+namespace CINE.GroceryTracker.Domain.Model;
 
 /// <summary>
 /// Money one member handed to another to even out who has paid more of the shared groceries.
