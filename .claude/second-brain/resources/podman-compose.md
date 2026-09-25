@@ -20,8 +20,9 @@ Every compose file must work under both Docker and Podman:
 - Named volumes, and no assumption of root on the host
 
 ## Known violations (as of 2026-09-25)
-- [ ] `Applications/GroceryTracker/docker-compose.yml`: `postgres:16-alpine` is a short name
-- [ ] `Applications/GroceryTracker/src/UI/Dockerfile`: `FROM nginx:alpine` is a short name
-- [ ] `Configurations/Docker/Compose/Keycloak/compose.yaml`: `bitnami/postgresql`, `bitnami/keycloak` are short names
+- [x] `Applications/GroceryTracker/docker-compose.yml`: `postgres:16-alpine` is a short name (fixed in PR #3)
+- [x] `Applications/GroceryTracker/src/UI/Dockerfile`: `FROM nginx:alpine` is a short name (fixed in PR #3)
+- [x] `Configurations/Docker/Compose/Keycloak/compose.yaml`: short `bitnami/*` names (qualified in PR #3).
+  Keycloak then moved to `quay.io/keycloak/keycloak:26.7` because `bitnami/keycloak` left Docker Hub.
 
 The `mcr.microsoft.com/...` images are already fully qualified.
