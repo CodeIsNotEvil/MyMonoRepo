@@ -73,3 +73,7 @@ Settlement was added this way. Its `AddSettlements` migration and IndexedDB vers
 **PWA caching:** nginx must not cache `index.html`, `service-worker.js` or `service-worker-assets.js`. The supplied configs handle this, so preserve it when you edit `deploy/nginx`.
 
 `Applications/GroceryTracker/README.md` and `src/Domain/Model/README.md` (ER diagram) have the detailed behaviour of the dashboard, balance and import features. Update them when you change that behaviour.
+
+## Second brain
+
+`.claude/second-brain/` is a Markdown knowledge base (Obsidian-compatible, PARA layout plus ADR-style `decisions/`). It records why decisions were made, open questions and gotchas. Start at its `index.md` before non-trivial work. When a session settles a design question or turns up a gotcha, update the relevant note and append to `journal/YYYY-MM-DD.md`. Its `README.md` has the conventions.
