@@ -17,9 +17,9 @@ Style comes from the root `.editorconfig`: 2-space indentation. Existing C# uses
 
 The owner commits straight to `main`, but Claude doesn't. Every change goes through a pull request so the owner can review it:
 
-1. Start each request on a new branch cut from an up-to-date `main`, named `claude/<short-topic>`. Don't commit to `main` or push to it.
+1. Start each request on a new branch cut from an up-to-date `main`. Give it a short, descriptive kebab-case name such as `compose-podman-image-names`, with no `claude/` prefix. Don't commit to `main` or push to it.
 2. Make small, focused commits on that branch.
-3. Push the branch, then open a pull request against `main` that says what changed and why.
+3. Push the branch, then open a pull request against `main` with `gh pr create`, saying what changed and why.
 4. Don't merge the PR yourself. The owner reviews and merges it. Push review follow-ups to the same branch.
 
 ## Containers: Docker and Podman
