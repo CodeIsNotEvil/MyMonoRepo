@@ -1,6 +1,7 @@
 services:
   postgresql:
-    image: bitnami/postgresql:latest
+    # Fully qualified names so this works under Podman as well as Docker.
+    image: docker.io/bitnami/postgresql:latest
     container_name: postgresql
     restart: unless-stopped
     environment:
@@ -18,7 +19,7 @@ services:
       - keycloak-network
 
   keycloak:
-    image: bitnami/keycloak:latest
+    image: docker.io/bitnami/keycloak:latest
     environment:
       - KEYCLOAK_DATABASE_TYPE=postgresql
       - KEYCLOAK_DATABASE_HOST=postgresql
