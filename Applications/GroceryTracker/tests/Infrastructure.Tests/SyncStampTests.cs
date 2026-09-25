@@ -1,9 +1,9 @@
-using GroceryTracker.Domain.Model;
-using GroceryTracker.Infrastructure.Data;
+using CINE.GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
-namespace GroceryTracker.Infrastructure.Tests;
+namespace CINE.GroceryTracker.Infrastructure.Tests;
 
 /// <summary>
 /// Covers the stamp allocation in <see cref="GroceryTrackerDbContext.SaveChangesAsync"/>, which the

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace GroceryTracker.Infrastructure.Migrations
+namespace CINE.GroceryTracker.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class AddSettlements : Migration

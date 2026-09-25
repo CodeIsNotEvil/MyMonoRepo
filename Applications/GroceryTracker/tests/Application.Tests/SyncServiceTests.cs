@@ -1,8 +1,8 @@
-using GroceryTracker.Contracts.Sync;
-using GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Contracts.Sync;
+using CINE.GroceryTracker.Domain.Model;
 using Microsoft.EntityFrameworkCore;
 
-namespace GroceryTracker.Application.Tests;
+namespace CINE.GroceryTracker.Application.Tests;
 
 public class SyncServiceTests
 {

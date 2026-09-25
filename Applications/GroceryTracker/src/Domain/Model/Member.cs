@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Domain.Sync;
 
-namespace GroceryTracker.Domain.Model;
+namespace CINE.GroceryTracker.Domain.Model;
 
 /// <summary>A person in the household who can pay for a shopping trip.</summary>
 public sealed class Member : ISyncEntity

@@ -1,8 +1,8 @@
 using System.Net.Http.Json;
-using GroceryTracker.Contracts.Sync;
+using CINE.GroceryTracker.Contracts.Sync;
 using Microsoft.Extensions.Logging;
 
-namespace GroceryTracker.UI.Blazor.Services;
+namespace CINE.GroceryTracker.UI.Blazor.Services;
 
 public enum SyncStatus
 {

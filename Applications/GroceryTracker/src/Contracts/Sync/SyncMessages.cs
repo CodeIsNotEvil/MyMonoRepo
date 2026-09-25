@@ -1,6 +1,6 @@
-using GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Domain.Model;
 
-namespace GroceryTracker.Contracts.Sync;
+namespace CINE.GroceryTracker.Contracts.Sync;
 
 /// <summary>
 /// One round trip of the sync protocol: push everything queued on the device, then pull everything

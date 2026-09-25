@@ -1,0 +1,15 @@
+<Project>
+  <!--
+    Every application and library in the monorepo lives under the CINE root namespace
+    (GroceryTracker.Domain -> CINE.GroceryTracker.Domain). Setting it here instead of in each csproj
+    means new projects pick it up automatically. Razor components need it most, because Razor builds
+    their namespace from RootNamespace plus the folder path.
+    This file lives in the app directory, not at the repo root, because the container builds use
+    Applications/GroceryTracker as their context and could not see a file above it.
+    Assembly and project names keep no prefix, so the Dockerfiles, the systemd unit and
+    InternalsVisibleTo, which refer to names like GroceryTracker.Api.dll, still work.
+  -->
+  <PropertyGroup>
+    <RootNamespace>CINE.$(MSBuildProjectName)</RootNamespace>
+  </PropertyGroup>
+</Project>

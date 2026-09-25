@@ -5,6 +5,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# Sets the CINE.* root namespace. It sits outside src/, so without this the Razor components
+# would compile into the unprefixed namespace and the build breaks on _Imports.razor.
+COPY Directory.Build.props ./
+
 COPY src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.csproj src/UI/GroceryTracker.UI.Blazor/
 COPY src/Contracts/GroceryTracker.Contracts.csproj src/Contracts/
 COPY src/Domain/GroceryTracker.Domain.csproj src/Domain/

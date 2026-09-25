@@ -1,7 +1,7 @@
 using System.Globalization;
-using GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Domain.Model;
 
-namespace GroceryTracker.Domain.Analytics;
+namespace CINE.GroceryTracker.Domain.Analytics;
 
 /// <summary>
 /// Pure spend analytics over already-loaded trips.

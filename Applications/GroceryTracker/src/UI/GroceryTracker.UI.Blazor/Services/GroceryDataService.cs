@@ -1,13 +1,13 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using GroceryTracker.Contracts.Sync;
-using GroceryTracker.Domain.Analytics;
-using GroceryTracker.Domain.Balance;
-using GroceryTracker.Domain.Import;
-using GroceryTracker.Domain.Model;
-using GroceryTracker.Domain.Sync;
+using CINE.GroceryTracker.Contracts.Sync;
+using CINE.GroceryTracker.Domain.Analytics;
+using CINE.GroceryTracker.Domain.Balance;
+using CINE.GroceryTracker.Domain.Import;
+using CINE.GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Domain.Sync;
 
-namespace GroceryTracker.UI.Blazor.Services;
+namespace CINE.GroceryTracker.UI.Blazor.Services;
 
 /// <summary>Which person a spreadsheet column belongs to.</summary>
 /// <param name="MemberId">An existing person, or null.</param>

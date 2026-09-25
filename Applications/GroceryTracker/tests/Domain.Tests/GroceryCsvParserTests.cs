@@ -1,8 +1,8 @@
-using GroceryTracker.Domain.Analytics;
-using GroceryTracker.Domain.Import;
-using GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Domain.Analytics;
+using CINE.GroceryTracker.Domain.Import;
+using CINE.GroceryTracker.Domain.Model;
 
-namespace GroceryTracker.Domain.Tests;
+namespace CINE.GroceryTracker.Domain.Tests;
 
 public class GroceryCsvParserTests
 {

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace GroceryTracker.UI.Blazor.Services;
+namespace CINE.GroceryTracker.UI.Blazor.Services;
 
 /// <summary>
 /// Formats amounts without depending on the browser's culture data.

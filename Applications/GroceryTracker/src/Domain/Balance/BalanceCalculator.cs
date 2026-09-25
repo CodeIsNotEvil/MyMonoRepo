@@ -1,6 +1,6 @@
-using GroceryTracker.Domain.Model;
+using CINE.GroceryTracker.Domain.Model;
 
-namespace GroceryTracker.Domain.Balance;
+namespace CINE.GroceryTracker.Domain.Balance;
 
 /// <param name="Balance">
 /// Positive: the rest of the household owes this person. Negative: this person owes the rest.

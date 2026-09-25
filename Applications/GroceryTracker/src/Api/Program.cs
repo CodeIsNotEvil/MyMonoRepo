@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
-using GroceryTracker.Application.Analytics;
-using GroceryTracker.Application.Households;
-using GroceryTracker.Application.Sync;
-using GroceryTracker.Infrastructure.Data;
+using CINE.GroceryTracker.Application.Analytics;
+using CINE.GroceryTracker.Application.Households;
+using CINE.GroceryTracker.Application.Sync;
+using CINE.GroceryTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);

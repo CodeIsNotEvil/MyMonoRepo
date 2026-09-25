@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace GroceryTracker.Domain.Import;
+namespace CINE.GroceryTracker.Domain.Import;
 
 /// <summary>
 /// Name-based ids, so the same imported booking gets the same id every time it is imported —

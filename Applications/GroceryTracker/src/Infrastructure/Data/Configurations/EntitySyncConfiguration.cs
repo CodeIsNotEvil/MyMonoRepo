@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace GroceryTracker.Infrastructure.Data.Configurations;
+namespace CINE.GroceryTracker.Infrastructure.Data.Configurations;
 
 public class EntitySyncCounterConfiguration : IEntityTypeConfiguration<SyncCounter>
 {

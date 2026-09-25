@@ -1,4 +1,4 @@
-namespace GroceryTracker.Domain.Analytics;
+namespace CINE.GroceryTracker.Domain.Analytics;
 
 public enum SpendGranularity
 {
