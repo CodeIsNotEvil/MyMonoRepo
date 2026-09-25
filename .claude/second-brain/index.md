@@ -25,6 +25,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0001-syncstamp-counter]]: sync cursors use a locked counter row, not timestamps
 - [[0002-sqlite-for-sync-tests]]: sync tests run on in-memory SQLite, not the EF in-memory provider
 - [[0003-shared-domain-analytics]]: the same analytics code runs on the server and in the browser
+- [[0004-cine-root-namespace]]: all .NET namespaces start with `CINE.`; assembly names do not
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker
