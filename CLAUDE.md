@@ -13,6 +13,25 @@ A personal monorepo of configs, scripts and learning projects. `main` is unprote
 
 Style comes from the root `.editorconfig`: 2-space indentation. Existing C# uses file-scoped namespaces and primary constructors, even though `.editorconfig` says block-scoped namespaces. Match the code. Comments explain *why* a decision was made, and there are many of them. Keep that density when you edit.
 
+## Git workflow for Claude
+
+The owner commits straight to `main`, but Claude doesn't. Every change goes through a pull request so the owner can review it:
+
+1. Start each request on a new branch cut from an up-to-date `main`, named `claude/<short-topic>`. Don't commit to `main` or push to it.
+2. Make small, focused commits on that branch.
+3. Push the branch, then open a pull request against `main` that says what changed and why.
+4. Don't merge the PR yourself. The owner reviews and merges it. Push review follow-ups to the same branch.
+
+## Containers: Docker and Podman
+
+The owner's CachyOS machine runs **Podman** (rootless) with no Docker daemon. Every compose file and Dockerfile must work unchanged under both `docker compose` and `podman compose`:
+
+- Use only features from the Compose spec. Leave out Docker-only extensions and don't depend on `/var/run/docker.sock`.
+- Use fully qualified image names (`docker.io/library/postgres:16-alpine`, not `postgres:16-alpine`). Podman may prompt for or reject short names, depending on `registries.conf`.
+- Rootless Podman can't bind host ports below 1024 by default. Publish high host ports (such as `8080:80`) or make them configurable.
+- Use named volumes, or bind mounts that work without SELinux relabeling. Don't assume the container runs as root on the host.
+- Document and run commands as `podman compose ...`, never a bare `docker-compose`. The reason is in the GroceryTracker README.
+
 ## GroceryTracker commands
 
 Run these from `Applications/GroceryTracker/`. The solution file is `GroceryTracker.slnx`.
