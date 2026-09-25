@@ -1,20 +1,25 @@
 services:
   postgresql:
-    # Fully qualified names so this works under Podman as well as Docker.
-    image: docker.io/bitnami/postgresql:latest
+    # The official image. Bitnami no longer updates its free images. 17 is within the Postgres
+    # versions Keycloak 26 supports, and the minor-free tag still brings patch releases.
+    image: docker.io/library/postgres:17-alpine
     container_name: postgresql
     restart: unless-stopped
     environment:
-      - POSTGRESQL_USERNAME=keycloak
-      - POSTGRESQL_PASSWORD=keycloak_password
-      - POSTGRESQL_DATABASE=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak_password
+      - POSTGRES_DB=keycloak
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      # Check as the real user and database. The old check asked for a `postgres` role that doesn't exist.
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
       interval: 5s
       timeout: 5s
       retries: 5
     volumes:
-      - Keycloak_PostgreSQL:/bitnami/postgresql
+      # A new volume on purpose: Bitnami kept its data in a `data/` subdirectory owned by uid 1001, and
+      # the official image refuses to initialise over it. The old `Keycloak_PostgreSQL` volume is left
+      # alone. Dump from it with the Bitnami image first if it holds anything worth keeping.
+      - keycloak-postgres-data:/var/lib/postgresql/data
     networks:
       - keycloak-network
 
@@ -43,7 +48,7 @@ services:
       - keycloak-network
 
 volumes:
-  Keycloak_PostgreSQL:
+  keycloak-postgres-data:
     driver: local
 
 networks:
