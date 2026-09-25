@@ -18,7 +18,8 @@ COPY src/ src/
 RUN dotnet publish src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.csproj \
       -c Release -o /app/publish --no-restore
 
-FROM nginx:alpine
+# Fully qualified so `podman build` resolves it without a short-name prompt, same as Docker does.
+FROM docker.io/library/nginx:alpine
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
 
 # A .template file in /etc/nginx/templates/ is rendered to /etc/nginx/conf.d/ by the base image's

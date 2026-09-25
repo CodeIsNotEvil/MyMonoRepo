@@ -11,7 +11,8 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # Fully qualified: rootless Podman may prompt for or reject short names, depending on registries.conf.
+    image: docker.io/library/postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
