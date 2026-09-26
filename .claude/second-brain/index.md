@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-09-26
 status: active
 ---
 # Index
@@ -10,6 +10,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 
 ## Projects
 - [[grocerytracker]]: offline-first grocery spend tracker (.NET 10, Blazor WASM PWA, PostgreSQL)
+- [[launchheim]]: Valheim mod launcher with per-instance BepInEx (.NET 10, Qml.Net / Qt Quick)
 
 ## Areas
 - [[raspberry-pi-homelab]]: the Debian 13 Pi that hosts GroceryTracker
