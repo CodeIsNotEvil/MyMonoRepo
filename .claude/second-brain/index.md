@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-09-26
 status: active
 ---
 # Index
@@ -10,6 +10,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 
 ## Projects
 - [[grocerytracker]]: offline-first grocery spend tracker (.NET 10, Blazor WASM PWA, PostgreSQL)
+- [[launchheim]]: Valheim mod launcher with per-instance BepInEx (.NET 10, Qml.Net / Qt Quick)
 
 ## Areas
 - [[raspberry-pi-homelab]]: the Debian 13 Pi that hosts GroceryTracker
@@ -26,6 +27,8 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0002-sqlite-for-sync-tests]]: sync tests run on in-memory SQLite, not the EF in-memory provider
 - [[0003-shared-domain-analytics]]: the same analytics code runs on the server and in the browser
 - [[0004-cine-root-namespace]]: all .NET namespaces start with `CINE.`; assembly names do not
+- [[0005-launchheim-distro-packages-use-system-qt]]: pacman/deb/rpm builds use the distro's Qt 5.15
+- [[0006-launchheim-windows-keeps-qml]]: Windows keeps the QML UI via a patched QmlNet.dll, no WinUI
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker

@@ -6,7 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A personal monorepo of configs, scripts and learning projects. `main` is unprotected and considered unstable; the owner rebases and commits directly to it.
 
-- `Applications/GroceryTracker/` — the only real application (.NET 10). Almost all code work happens here.
+- `Applications/GroceryTracker/` — the main application (.NET 10). Most code work happens here.
+- `Applications/LaunchHeim/` — a Valheim mod launcher desktop app (.NET 10, Qml.Net) for Linux and Windows. Its README has the build, the Qt runtime workarounds and how it works; `packaging/README.md` covers the pacman, deb, rpm and Windows builds. Windows builds need MSVC and come from the `LaunchHeim Windows` GitHub workflow.
 - `Configurations/` — dotfiles and infra snippets (Nushell, Keycloak compose, Kubernetes/Helm). The `Helm/ShoppingManager` chart is left over from ShoppingManager, which GroceryTracker replaced.
 - `Scripts/dotnet_project.sh` — the scaffolding script that generated the ShoppingManager layout (Api/Application/Domain/Infrastructure/UI + xUnit/bUnit test projects). Its paths are hardcoded to `~/Repositories/MyMonoRepo`.
 - `Applications/PlayGround/` is gitignored scratch space.
