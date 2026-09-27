@@ -2,7 +2,9 @@
 # actually runs on the Pi. The API is reached through this same nginx, so the browser only ever
 # talks to one origin.
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# WebAssembly output is the same for every architecture, so the SDK stage runs on the build machine
+# ($BUILDPLATFORM) and only the nginx stage below is built per architecture.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Sets the CINE.* root namespace. It sits outside src/, so without this the Razor components
