@@ -6,6 +6,8 @@ PWA that works with no connection at all and reconciles with the backend once it
 Built to run on a Raspberry Pi with Debian 13 (Trixie): nginx serves the WebAssembly app and
 proxies the API to an ASP.NET Core backend, which talks to PostgreSQL through EF Core.
 
+MIT-licensed, see [`LICENSE`](LICENSE).
+
 ## Architecture
 
 ```
@@ -307,6 +309,22 @@ The step-by-step runbooks live in [`deploy/`](deploy/README.md): [rollout with
 Compose](deploy/rollout-containers.md) covers installing, updating, backups and rolling back, and
 [rollout without containers](deploy/rollout-native.md) covers the systemd and nginx route. The rest
 of this section is the short version.
+
+### Prebuilt images (no build, no checkout)
+
+Every release publishes multi-arch images (amd64 and arm64) to GitHub's container registry:
+`ghcr.io/codeisnotevil/grocerytracker-api`, `-web` and `-migration-runner`.
+[`deploy/release/compose.yaml`](deploy/release/compose.yaml) runs them and is attached to each
+`grocerytracker-v*` release together with its `env.example`. The
+[download page](https://codeisnotevil.github.io/MyMonoRepo/download.html#grocerytracker) has the
+four commands. Updating is `podman compose pull && podman compose up -d`, and
+`GROCERYTRACKER_VERSION` in `.env` pins a release. This is the route for anyone who just wants to run
+it. The steps below build from source, which is what you need when you change the code.
+
+Releasing: `git tag grocerytracker-v1.2.3 && git push origin grocerytracker-v1.2.3`. The
+`GroceryTracker images` workflow builds and publishes the images and creates the release. Every
+push to `main` also publishes an `edge` tag for testing. The Dockerfiles build .NET on the runner's
+own architecture and only the runtime layers per platform, so the arm64 images need no emulated .NET.
 
 The Pi target is **Debian 13 (Trixie)** on arm64, which is also what 64-bit Raspberry Pi OS is
 built on. Docker Engine from Docker's own apt repository is the path of least friction: Debian's

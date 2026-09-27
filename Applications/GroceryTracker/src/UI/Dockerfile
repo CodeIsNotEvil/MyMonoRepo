@@ -2,7 +2,9 @@
 # actually runs on the Pi. The API is reached through this same nginx, so the browser only ever
 # talks to one origin.
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# WebAssembly output is the same for every architecture, so the SDK stage runs on the build machine
+# ($BUILDPLATFORM) and only the nginx stage below is built per architecture.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Sets the CINE.* root namespace. It sits outside src/, so without this the Razor components
@@ -25,6 +27,9 @@ RUN dotnet publish src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.cspr
 # Fully qualified so `podman build` resolves it without a short-name prompt, same as Docker does.
 FROM docker.io/library/nginx:alpine
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
+
+# MIT asks for the notice to travel with every copy, and an image is a copy.
+COPY LICENSE /usr/share/licenses/grocerytracker/LICENSE
 
 # A .template file in /etc/nginx/templates/ is rendered to /etc/nginx/conf.d/ by the base image's
 # own entrypoint (via envsubst) on every container start, which is what lets ${NGINX_LOCAL_RESOLVERS}

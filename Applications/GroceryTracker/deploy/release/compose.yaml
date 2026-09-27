@@ -1,0 +1,86 @@
+# GroceryTracker from prebuilt images. Nothing to build and no source checkout needed.
+#
+#   curl -LO <release>/compose.yaml -LO <release>/env.example   (links on the download page)
+#   cp env.example .env && nano .env      # set a real POSTGRES_PASSWORD
+#   podman compose up -d                  # or: docker compose up -d
+#
+# Update:  podman compose pull && podman compose up -d
+# The images are multi-arch (amd64 and arm64, e.g. a Raspberry Pi) and published to GitHub's container
+# registry by .github/workflows/grocerytracker-images.yml. GROCERYTRACKER_VERSION in .env picks the
+# release; "latest" follows the newest one. The data lives in the named volume and survives updates:
+# the migration-runner applies database migrations on every `up`.
+#
+# This is ../../docker-compose.yml with `image:` instead of `build:`. Keep the two in step.
+
+services:
+  postgres:
+    # Fully qualified: rootless Podman may prompt for or reject short names, depending on registries.conf.
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-grocerytracker}
+    volumes:
+      - grocerytracker-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-grocerytracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Deliberately not published to the host: nothing outside this stack needs the database.
+    expose:
+      - "5432"
+
+  migration-runner:
+    image: ghcr.io/codeisnotevil/grocerytracker-migration-runner:${GROCERYTRACKER_VERSION:-latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-grocerytracker}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    restart: "no"
+
+  api:
+    image: ghcr.io/codeisnotevil/grocerytracker-api:${GROCERYTRACKER_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migration-runner:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_URLS: http://+:5000
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-grocerytracker};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+    expose:
+      - "5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  web:
+    image: ghcr.io/codeisnotevil/grocerytracker-web:${GROCERYTRACKER_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "${WEB_PORT:-8080}:80"
+      # HTTPS, which an installed PWA needs before it will register a service worker. It is served
+      # once a certificate is in ./certs (see the HTTPS guide linked from the download page); without
+      # one the container simply stays on HTTP.
+      - "${WEB_TLS_PORT:-8443}:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+
+volumes:
+  grocerytracker-postgres-data:
+    driver: local
