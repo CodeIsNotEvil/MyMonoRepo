@@ -6,6 +6,8 @@ PWA that works with no connection at all and reconciles with the backend once it
 Built to run on a Raspberry Pi with Debian 13 (Trixie): nginx serves the WebAssembly app and
 proxies the API to an ASP.NET Core backend, which talks to PostgreSQL through EF Core.
 
+MIT-licensed, see [`LICENSE`](LICENSE).
+
 ## Architecture
 
 ```

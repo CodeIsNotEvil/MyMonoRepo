@@ -76,6 +76,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=grocerytracker-${{ matrix.name }}
             org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.licenses=MIT
 
       - uses: docker/build-push-action@v6
         with:
@@ -127,6 +128,7 @@ jobs:
           gh release create "$TAG" \
             Applications/GroceryTracker/deploy/release/compose.yaml \
             Applications/GroceryTracker/deploy/release/env.example \
+            Applications/GroceryTracker/LICENSE \
             --title "GroceryTracker ${version}" --notes-file notes.md --latest=false
 
       # A release made with GITHUB_TOKEN triggers no other workflows (GitHub's loop protection), so

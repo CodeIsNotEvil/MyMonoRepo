@@ -31,4 +31,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
+
+# MIT asks for the notice to travel with every copy, and an image is a copy.
+COPY LICENSE /usr/share/licenses/grocerytracker/LICENSE
+
 ENTRYPOINT ["dotnet", "GroceryTracker.MigrationRunner.dll"]

@@ -16,6 +16,8 @@ Blazor WASM standalone PWA → IndexedDB + outbox → `POST /api/sync` → ASP.N
 auth and no CORS in production.
 
 ## Key ideas
+- MIT-licensed (owner's choice, 2026-09-27), `Applications/GroceryTracker/LICENSE`. The text is also in each
+  image under `/usr/share/licenses/grocerytracker/` and attached to each release.
 - [[offline-first-sync]]: the UI never waits on the network.
 - [[0001-syncstamp-counter]]: why pulls can't miss commits.
 - [[0003-shared-domain-analytics]]: offline figures match the server's.

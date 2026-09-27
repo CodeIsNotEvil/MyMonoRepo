@@ -28,6 +28,9 @@ RUN dotnet publish src/UI/GroceryTracker.UI.Blazor/GroceryTracker.UI.Blazor.cspr
 FROM docker.io/library/nginx:alpine
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
 
+# MIT asks for the notice to travel with every copy, and an image is a copy.
+COPY LICENSE /usr/share/licenses/grocerytracker/LICENSE
+
 # A .template file in /etc/nginx/templates/ is rendered to /etc/nginx/conf.d/ by the base image's
 # own entrypoint (via envsubst) on every container start, which is what lets ${NGINX_LOCAL_RESOLVERS}
 # below pick up this container's *current* DNS resolver rather than a value baked in at build time.

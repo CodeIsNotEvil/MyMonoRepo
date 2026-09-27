@@ -48,5 +48,8 @@ ENV ASPNETCORE_URLS=http://+:5000 \
 
 COPY --from=build /app/publish .
 
+# MIT asks for the notice to travel with every copy, and an image is a copy.
+COPY LICENSE /usr/share/licenses/grocerytracker/LICENSE
+
 EXPOSE 5000
 ENTRYPOINT ["dotnet", "GroceryTracker.Api.dll"]
