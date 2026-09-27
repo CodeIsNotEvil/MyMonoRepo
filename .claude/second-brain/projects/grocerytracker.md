@@ -40,5 +40,11 @@ auth and no CORS in production.
 - [ ] Could the Keycloak compose snippet in `Configurations/` serve that? See [[kubernetes-learning]]
 - [ ] Backup automation for the Pi's PostgreSQL. Migrations are forward-only, so the dump *is* the rollback plan
 
+## Gotchas
+- The UI font is Kode Mono, a wide monospace. Amounts must stay unbreakable (`Money` uses a no-break
+  space) and anything that sits side by side on a phone needs checking at 360px. The `wraps`
+  modifiers on `.field-row` and `.list-row` stack or wrap on narrow screens (2026-09-27).
+
 ## Log
 - 2026-09-25: Second brain created. See [[2026-09-25]].
+- 2026-09-27: Kode Mono font and narrow-width layout fixes. See [[2026-09-27]].

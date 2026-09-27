@@ -251,6 +251,8 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius);
   padding: .85rem;
   box-shadow: var(--shadow);
+  /* Lets .tile-value size itself to the tile rather than the screen (tiles are 2 or 4 per row). */
+  container-type: inline-size;
 }
 
 .tile-label {
@@ -262,10 +264,13 @@ a:hover { text-decoration: underline; }
 }
 
 .tile-value {
-  font-size: 1.45rem;
+  /* Kode Mono is wide: a figure like "€ 10,339.13" is 11 characters of about .6em each. 13cqi keeps
+     up to 12 of them on one line in any tile; 1.45rem is the size wherever there is room. */
+  font-size: clamp(.95rem, 13cqi, 1.45rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
+  white-space: nowrap;
 }
 
 .tile-note { font-size: .78rem; color: var(--text-secondary); margin-top: .2rem; }
@@ -301,6 +306,11 @@ input:focus, select:focus, textarea:focus {
 .field { margin-bottom: .85rem; }
 .field-row { display: flex; gap: .6rem; }
 .field-row > * { flex: 1; min-width: 0; }
+
+/* Pairs that must not be squeezed, such as a date next to an amount: a monospace date field needs
+   about 9rem, or its year is cut off. Below that they stack, one per line. */
+.field-row.wraps { flex-wrap: wrap; }
+.field-row.wraps > * { flex: 1 1 9.5rem; }
 
 .btn {
   display: inline-flex;
@@ -368,6 +378,11 @@ input:focus, select:focus, textarea:focus {
 
 .list-row:last-child { border-bottom: none; }
 .list-row .grow { flex: 1; min-width: 0; }
+
+/* A row whose text field must stay readable: on a phone the controls after it move to a second line,
+   right-aligned under the field, instead of shrinking the field to a few letters. */
+.list-row.wraps { flex-wrap: wrap; row-gap: .5rem; justify-content: flex-end; }
+.list-row.wraps .grow { flex: 1 1 12rem; }
 .list-row .amount { font-variant-numeric: tabular-nums; font-weight: 650; white-space: nowrap; }
 .row-title { font-weight: 600; }
 .row-sub { font-size: .82rem; color: var(--text-secondary); }

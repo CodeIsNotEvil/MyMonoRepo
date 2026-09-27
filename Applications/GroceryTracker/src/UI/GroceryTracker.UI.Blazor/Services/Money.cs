@@ -12,6 +12,10 @@ namespace CINE.GroceryTracker.UI.Blazor.Services;
 /// </remarks>
 public static class Money
 {
+  // A no-break space between symbol and number, so "€" never ends up alone at the end of a line when
+  // the monospace UI font makes an amount wrap in a narrow tile or sentence.
+  private const char NoBreakSpace = '\u00A0';
+
   private static readonly Dictionary<string, string> Symbols = new(StringComparer.OrdinalIgnoreCase)
   {
     ["EUR"] = "€",
@@ -26,7 +30,7 @@ public static class Money
   {
     var symbol = Symbol(currencyCode);
     var number = amount.ToString(withDecimals ? "N2" : "N0", CultureInfo.InvariantCulture);
-    return $"{symbol} {number}";
+    return $"{symbol}{NoBreakSpace}{number}";
   }
 
   /// <summary>Compact form for chart labels, where a full amount would not fit.</summary>
@@ -35,8 +39,8 @@ public static class Money
     var symbol = Symbol(currencyCode);
 
     return Math.Abs(amount) >= 1000m
-      ? $"{symbol} {(amount / 1000m).ToString("0.#", CultureInfo.InvariantCulture)}k"
-      : $"{symbol} {amount.ToString("0", CultureInfo.InvariantCulture)}";
+      ? $"{symbol}{NoBreakSpace}{(amount / 1000m).ToString("0.#", CultureInfo.InvariantCulture)}k"
+      : $"{symbol}{NoBreakSpace}{amount.ToString("0", CultureInfo.InvariantCulture)}";
   }
 
   public static string Symbol(string currencyCode) =>
