@@ -1,6 +1,18 @@
 /* GroceryTracker styles.
    Everything is local: no CDN, no webfont fetch, so the app looks identical with no connection. */
 
+/* Kode Mono is self-hosted for the same reason: the service worker caches it with the rest of the
+   app, so an offline device doesn't fall back to a different font. It's one variable file covering
+   400–700, which is every weight the styles below use. SIL OFL 1.1, see fonts/OFL.txt.
+   `swap` keeps text readable in the fallback font during the first, uncached load. */
+@font-face {
+  font-family: "Kode Mono";
+  src: url("../fonts/KodeMono.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
 
@@ -70,7 +82,7 @@
 html, body {
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Kode Mono", ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace;
   background: var(--surface-0);
   color: var(--text-primary);
   -webkit-text-size-adjust: 100%;
