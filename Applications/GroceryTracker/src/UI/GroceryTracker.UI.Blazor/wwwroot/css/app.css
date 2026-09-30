@@ -203,14 +203,32 @@ a:hover { text-decoration: underline; }
 
   .nav-item.active { background: var(--accent-soft); }
   .app-main { padding-bottom: 2rem; }
-  .nav-brand { display: block; }
+  .nav-brand { display: flex; }
 }
 
 .nav-brand {
   display: none;
+  align-items: center;
+  gap: .6rem;
   font-weight: 700;
   padding: .3rem .8rem 1rem;
   font-size: 1.1rem;
+}
+
+/* The GT logo in the wide layout's nav, with the glint of the website and the C profile picture: a
+   band twice the logo's size, centred on its top-left corner, moves to its bottom-right corner in
+   0.96 s, once every 3.84 s. Clipped to the logo's path, so only the letters light up. That is the
+   GIF's pace (about one logo-diagonal per second). Nothing moves with reduced motion. */
+.brand-logo { width: 2rem; height: 2rem; flex: none; }
+.brand-glint { transform: translate(0, 0); }
+
+@keyframes brand-glint {
+  0%, 75% { transform: translate(0, 0); }
+  100% { transform: translate(512px, 512px); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .brand-glint { animation: brand-glint 3.84s linear infinite; }
 }
 
 /* ---------- Cards & tiles ---------- */

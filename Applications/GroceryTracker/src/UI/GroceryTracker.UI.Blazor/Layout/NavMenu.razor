@@ -1,5 +1,26 @@
 <nav class="nav-bar">
-    <span class="nav-brand">Groceries</span>
+    <span class="nav-brand">
+        @* The GT logo (assets/GT-logo-optimized.svg), inline so the glint can be clipped to its shape
+           without another copy of the file in wwwroot. The glint matches the one on the website and
+           the C profile picture; see .brand-glint in app.css. *@
+        <svg class="brand-logo" viewBox="0 0 512 512" aria-hidden="true">
+            <defs>
+                <clipPath id="gt-logo-shape"><path transform="translate(43.44 377.96) scale(0.34846 -0.34846)" d="M151 700 59 604V129L145 0H541V353L491 429H280V317H421V113H205L180 152V568L198 587H390L451 496L531 577L449 700ZM639 700H1161V587H895L961 528V0H840V500L811 587H639Z" /></clipPath>
+                <linearGradient id="gt-logo-shine" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="43.25%" stop-color="#fff" stop-opacity="0" />
+                    <stop offset="47.4%" stop-color="#fff" stop-opacity=".35" />
+                    <stop offset="50%" stop-color="#fff" stop-opacity=".85" />
+                    <stop offset="52.6%" stop-color="#fff" stop-opacity=".35" />
+                    <stop offset="56.75%" stop-color="#fff" stop-opacity="0" />
+                </linearGradient>
+            </defs>
+            <path fill="#DE5833" transform="translate(43.44 377.96) scale(0.34846 -0.34846)" d="M151 700 59 604V129L145 0H541V353L491 429H280V317H421V113H205L180 152V568L198 587H390L451 496L531 577L449 700ZM639 700H1161V587H895L961 528V0H840V500L811 587H639Z" />
+            <g clip-path="url(#gt-logo-shape)">
+                <rect class="brand-glint" x="-512" y="-512" width="1024" height="1024" fill="url(#gt-logo-shine)" />
+            </g>
+        </svg>
+        Groceries
+    </span>
 
     <NavLink class="nav-item" href="" Match="NavLinkMatch.All">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
