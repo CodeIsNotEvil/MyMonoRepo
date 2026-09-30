@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-09-27
+updated: 2026-09-30
 status: active
 ---
 # Index
@@ -31,6 +31,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0005-launchheim-distro-packages-use-system-qt]]: pacman/deb/rpm builds use the distro's Qt 5.15
 - [[0006-launchheim-windows-keeps-qml]]: Windows keeps the QML UI via a patched QmlNet.dll, no WinUI
 - [[0007-per-app-releases-and-prebuilt-images]]: tag-prefixed releases, GHCR images, a download page that follows them
+- [[0008-changelog-per-app]]: CHANGELOG.md per app drives release notes and the site's version history
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker

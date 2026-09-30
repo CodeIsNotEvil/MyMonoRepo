@@ -321,8 +321,12 @@ four commands. Updating is `podman compose pull && podman compose up -d`, and
 `GROCERYTRACKER_VERSION` in `.env` pins a release. This is the route for anyone who just wants to run
 it. The steps below build from source, which is what you need when you change the code.
 
-Releasing: `git tag grocerytracker-v1.2.3 && git push origin grocerytracker-v1.2.3`. The
-`GroceryTracker images` workflow builds and publishes the images and creates the release. Every
+Releasing: bump `<Version>` in `Directory.Build.props` (Settings → About shows it), add the version's
+section to [`CHANGELOG.md`](CHANGELOG.md), merge, then
+`git tag grocerytracker-v1.2.3 && git push origin grocerytracker-v1.2.3`. The `GroceryTracker images`
+workflow refuses a tag that doesn't match the version or has no changelog section. It builds and
+publishes the images and creates the release, whose notes start with the changelog section. The
+download page lists every version from the changelog. Every
 push to `main` also publishes an `edge` tag for testing. The Dockerfiles build .NET on the runner's
 own architecture and only the runtime layers per platform, so the arm64 images need no emulated .NET.
 
