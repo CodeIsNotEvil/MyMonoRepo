@@ -6,7 +6,9 @@
 #   tag grocerytracker-v1.2.3         :1.2.3, :1.2, :1, :latest, plus a GitHub release carrying
 #                                     compose.yaml and env.example from deploy/release
 #
-# Release:  git tag grocerytracker-v1.0.0 && git push origin grocerytracker-v1.0.0
+# Release:  bump <Version> in Applications/GroceryTracker/Directory.Build.props, add its section to
+#           Applications/GroceryTracker/CHANGELOG.md, merge, then
+#           git tag grocerytracker-v1.0.0 && git push origin grocerytracker-v1.0.0
 name: GroceryTracker images
 
 on:
@@ -26,7 +28,25 @@ permissions:
   contents: read
 
 jobs:
+  version:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # The tag names the release; Directory.Build.props is what the app shows in Settings → About,
+      # and the changelog is what users read. All three must agree before anything is published.
+      - name: Tag matches the app version and the changelog
+        if: startsWith(github.ref, 'refs/tags/grocerytracker-v')
+        run: |
+          app=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Applications/GroceryTracker/Directory.Build.props)
+          tag="${GITHUB_REF_NAME#grocerytracker-v}"
+          if [ "$app" != "$tag" ]; then
+            echo "::error::Tag says $tag but Directory.Build.props says $app. Bump <Version> first."
+            exit 1
+          fi
+          python3 Scripts/changelog.py check Applications/GroceryTracker/CHANGELOG.md "$tag"
+
   image:
+    needs: version
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -107,7 +127,12 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           version="${TAG#grocerytracker-v}"
-          cat > notes.md <<EOF
+          # What changed first, from the changelog; then how to install or update.
+          python3 Scripts/changelog.py notes Applications/GroceryTracker/CHANGELOG.md "$version" > notes.md
+          cat >> notes.md <<EOF
+
+          ---
+
           Prebuilt images for amd64 and arm64:
 
           - \`ghcr.io/codeisnotevil/grocerytracker-api:${version}\`
