@@ -8,3 +8,5 @@ obj/
 # Exclude the playGround its just for quick testing
 /Applications/PlayGround/
 .vscode
+# Python bytecode, e.g. from site/build.py importing Scripts/changelog.py
+__pycache__/
