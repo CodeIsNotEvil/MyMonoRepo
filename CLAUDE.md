@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository layout
 
-A personal monorepo of configs, scripts and learning projects. `main` is unprotected and considered unstable; the owner rebases and commits directly to it.
+A personal monorepo of configs, scripts and learning projects. `main` is protected by the `protect-main` ruleset: no force pushes and no deletion, so its history is never rewritten.
 
 - `Applications/GroceryTracker/` — the main application (.NET 10). Most code work happens here.
 - `Applications/LaunchHeim/` — a Valheim mod launcher desktop app (.NET 10, Qml.Net) for Linux and Windows. Its README has the build, the Qt runtime workarounds and how it works; `packaging/README.md` covers the pacman, deb, rpm and Windows builds. Windows builds need MSVC and come from the `LaunchHeim Windows` GitHub workflow. When you add or upgrade a dependency, update `THIRD-PARTY-NOTICES.txt` and `licenses/` (README "Licenses").
