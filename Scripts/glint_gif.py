@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a square SVG logo as an animated GIF with a glint sweeping across it.
 
-  Scripts/glint_gif.py Assets/C-logo.svg 'Assets/C-logo-glint-{size}.gif'
+  Scripts/glint_gif.py Assets/c-logo/C-logo.svg 'Assets/c-logo/C-logo-glint-{size}.gif'
 
 Made for the GitHub profile picture. By default it writes every power of two from 1024 down to 32 px,
 one file per size ({size} in the output name). GitHub takes a PNG, JPG or GIF under 1 MB and smaller
