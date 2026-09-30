@@ -11,5 +11,10 @@
   -->
   <PropertyGroup>
     <RootNamespace>CINE.$(MSBuildProjectName)</RootNamespace>
+    <!--
+      The release version. The grocerytracker-v* tag must match it (the images workflow checks), the
+      PWA shows it under Settings → About, and CHANGELOG.md needs a section for it.
+    -->
+    <Version>0.2.0</Version>
   </PropertyGroup>
 </Project>
