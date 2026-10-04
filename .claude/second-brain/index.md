@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-09-30
+updated: 2026-10-04
 status: active
 ---
 # Index
@@ -33,6 +33,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0007-per-app-releases-and-prebuilt-images]]: tag-prefixed releases, GHCR images, a download page that follows them
 - [[0008-changelog-per-app]]: CHANGELOG.md per app drives release notes and the site's version history
 - [[0009-launchheim-modpacks-are-r2z]]: LaunchHeim modpacks are r2modman `.r2z` files plus `launchheim.json`
+- [[0010-launchheim-direct-play-uses-the-games-own-options]]: joining servers and opening worlds uses `+connect` and Valheim's PlayerPrefs, no plugin
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker
