@@ -16,6 +16,8 @@ A personal monorepo of configs, scripts and learning projects. `main` is protect
 
 Style comes from the root `.editorconfig`: 2-space indentation. Existing C# uses file-scoped namespaces and primary constructors, even though `.editorconfig` says block-scoped namespaces. Match the code.
 
+Build file-system paths with the platform's path API, never by joining strings with `/` or `\`: `Path.Combine` (or `Path.Join`) in C#, `File(parent, child)` or `resolve` in Kotlin, `Join-Path` in PowerShell, `pathlib` in Python. LaunchHeim, its tests and its CI also run on Windows, where hand-built paths and expected values in tests break. Forward slashes stay only where a format defines them: zip entry names, URLs, and the instance-relative paths LaunchHeim stores (normalized by `ModInstaller.NormalizePath`).
+
 Every .NET application and library in the repo uses the root namespace `CINE` (`CINE.GroceryTracker.Domain`, not `GroceryTracker.Domain`). Each app sets it once in its own `Directory.Build.props` with `<RootNamespace>CINE.$(MSBuildProjectName)</RootNamespace>`. Project and assembly names stay unprefixed. The file lives inside the app directory because that directory is the container build context, and every Dockerfile has to `COPY Directory.Build.props ./`. Without it, Razor components compile into the wrong namespace.
 
 Comments explain *why* a decision was made, and there are many of them. Keep that density when you edit.
