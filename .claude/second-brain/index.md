@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-10-05
+updated: 2026-10-08
 status: active
 ---
 # Index
@@ -35,6 +35,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0009-launchheim-modpacks-are-r2z]]: LaunchHeim modpacks are r2modman `.r2z` files plus `launchheim.json`
 - [[0010-launchheim-direct-play-uses-the-games-own-options]]: joining servers and opening worlds uses `+connect` and Valheim's PlayerPrefs, no plugin
 - [[0011-launchheim-companion-syncs-packs-over-localsend]]: the Android companion (Kotlin) syncs `.r2z` packs and the server list over LocalSend
+- [[0012-launchheim-windows-self-signed-code-signing]]: the Windows exe and own DLLs are Authenticode-signed with a self-signed certificate
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker
