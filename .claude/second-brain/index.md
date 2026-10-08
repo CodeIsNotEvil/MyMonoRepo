@@ -36,6 +36,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0010-launchheim-direct-play-uses-the-games-own-options]]: joining servers and opening worlds uses `+connect` and Valheim's PlayerPrefs, no plugin
 - [[0011-launchheim-companion-syncs-packs-over-localsend]]: the Android companion (Kotlin) syncs `.r2z` packs and the server list over LocalSend
 - [[0012-launchheim-windows-self-signed-code-signing]]: the Windows exe and own DLLs are Authenticode-signed with a self-signed certificate
+- [[0013-launchheim-windows-setup-with-inno-setup]]: the Windows setup is Inno Setup; installed copies update by running the new setup
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker
