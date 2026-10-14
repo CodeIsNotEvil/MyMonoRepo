@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-10-08
+updated: 2026-10-14
 status: active
 ---
 # Index
@@ -38,6 +38,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0012-launchheim-windows-self-signed-code-signing]]: the Windows exe and own DLLs are Authenticode-signed with a self-signed certificate
 - [[0013-launchheim-windows-setup-with-inno-setup]]: the Windows setup is Inno Setup; installed copies update by running the new setup
 - [[0014-launchheim-steam-overlay]]: Steam's overlay via preload on Linux and `steam.exe -applaunch` on Windows
+- [[0015-launchheim-steam-launch-options-wrap-steams-command]]: `launchheim steam %command%` in Valheim's launch options starts the last play from Steam
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker
