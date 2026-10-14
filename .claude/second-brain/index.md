@@ -39,6 +39,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0013-launchheim-windows-setup-with-inno-setup]]: the Windows setup is Inno Setup; installed copies update by running the new setup
 - [[0014-launchheim-steam-overlay]]: Steam's overlay via preload on Linux and `steam.exe -applaunch` on Windows
 - [[0015-launchheim-steam-launch-options-wrap-steams-command]]: `launchheim steam %command%` in Valheim's launch options starts the last play from Steam
+- [[0016-launchheim-instant-start-plugin]]: "Start instantly" is a BepInEx plugin pressing Start in Valheim's menus, opt-in per server or world
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker
