@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-10-14
+updated: 2026-10-16
 status: active
 ---
 # Index
@@ -12,6 +12,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[grocerytracker]]: offline-first grocery spend tracker (.NET 10, Blazor WASM PWA, PostgreSQL)
 - [[app-site]]: GitHub Pages site promoting the apps, with downloads and install guides
 - [[launchheim]]: Valheim mod launcher with per-instance BepInEx (.NET 10, Qml.Net / Qt Quick)
+- [[druckwerk]] (plan): MIT C# libraries for barcodes, MDR labels, fiscal receipts and vector output, printing over any connection, Germany first
 
 ## Areas
 - [[raspberry-pi-homelab]]: the Debian 13 Pi that hosts GroceryTracker
@@ -22,6 +23,8 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[offline-first-sync]]: the push/pull and stamp pattern, reusable beyond this app
 - [[dotnet-gotchas]]: toolchain snags on Arch/CachyOS and with EF Core
 - [[podman-compose]]: why it's always `podman compose`
+- [[mdr-labelling]]: what the EU MDR/IVDR (UDI, ISO 15223-1, ISO 13485 validation) asks of label software
+- [[fiscal-receipts]]: what KassenSichV, RKSV and friends ask of a receipt printer library
 
 ## Decisions
 - [[0001-syncstamp-counter]]: sync cursors use a locked counter row, not timestamps
@@ -41,6 +44,8 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0015-launchheim-steam-launch-options-wrap-steams-command]]: `launchheim steam %command%` in Valheim's launch options starts the last play from Steam
 - [[0016-launchheim-instant-start-plugin]]: "Start instantly" is a BepInEx plugin pressing Start in Valheim's menus, opt-in per server or world
 - [[0017-launchheim-keeps-achievements-with-the-games-own-switch]]: "Keep Steam achievements with mods" sets the dev command's character key, and only undoes its own
+- [[0018-apps-get-their-own-repo-at-1-0]]: apps stay in the monorepo while 0.x and move to their own repository at 1.0
+- [[0019-druckwerk-renders-with-skiasharp]]: Druckwerk renders with SkiaSharp and writes only the gaps (barcodes, TIFF, 1-bit, mm SVG, PDF/A-3)
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker
