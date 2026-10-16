@@ -25,7 +25,11 @@ building against this. It's a map, not legal advice.
 - **EN ISO 15223-1:2021**: the label symbols (manufacturer, date of manufacture, use-by date, LOT,
   REF, SN, "MD", "UDI", sterile variants, "do not reuse", "consult instructions", ...).
   **EN ISO 20417:2021**: the information the manufacturer supplies in general.
-- Labels are often multilingual (each member state decides which languages).
+- Labels are often multilingual (each member state decides which languages). **Germany: the MPDG**
+  (Medizinprodukterecht-Durchführungsgesetz) requires the information for users in Germany to be in
+  German, with narrow exceptions for professional users. The BfArM is the competent authority.
+- Related German codes: the **PZN** (pharmacy number, Code 39) and the **IFA PPN** in a DataMatrix,
+  which securPharm also uses for medicines.
 
 ## What it asks of the *software*
 The label software isn't a medical device itself. Manufacturers use it inside their quality
@@ -44,8 +48,9 @@ management system, so:
 ## Consequences for Druckwerk
 - The licence says "AS IS". MDR conformity is the manufacturer's job. We make it *possible and cheap*:
   features plus a validation kit, never a promise of certification.
-- Deterministic output (same input + same version = byte-identical result on every OS) means a
-  customer validates once instead of once per platform.
+- Reproducible output (same input + same version = the same result on a given platform; Druckwerk
+  renders with SkiaSharp, see [[0019-druckwerk-renders-with-skiasharp]]) plus a published list of the
+  platforms each release was tested on. Customers validate on the platform they run.
 - Template lifecycle (draft → review → released → retired) with electronic signatures, immutable
   released versions, an append-only audit trail, and decoding every barcode back after rendering to
   compare it with the intended data.
