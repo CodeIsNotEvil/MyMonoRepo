@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-10-14
+updated: 2026-10-16
 status: active
 ---
 # Index
@@ -12,6 +12,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[grocerytracker]]: offline-first grocery spend tracker (.NET 10, Blazor WASM PWA, PostgreSQL)
 - [[app-site]]: GitHub Pages site promoting the apps, with downloads and install guides
 - [[launchheim]]: Valheim mod launcher with per-instance BepInEx (.NET 10, Qml.Net / Qt Quick)
+- [[druckwerk]] (plan, working name): MIT C# libraries for barcodes, labels, receipts and vector output, with printing
 
 ## Areas
 - [[raspberry-pi-homelab]]: the Debian 13 Pi that hosts GroceryTracker
