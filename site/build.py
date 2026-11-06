@@ -10,13 +10,15 @@ What it does:
   holds its own drifting copies.
 - Renders each app's CHANGELOG.md (through Scripts/changelog.py) into a version history, so users see
   what changed between the version they run and the newest one.
-- Asks the GitHub API for each app's newest release (tags grocerytracker-v* and launchheim-v*) and
+- Asks the GitHub API for each app's newest release (tags grocerytracker-v*) and
   links its files directly, with the SHA-256 GitHub computed for each. The repository holds several
   apps, so GitHub's single "latest release" link can't be used. Before an app has a release, <!-- if:key --> ... <!-- else --> ... <!-- end -->
   blocks show build instructions instead.
 
 With --mirror-installers it also publishes the newest LaunchHeim Windows setups under downloads/,
 because the Microsoft Store needs an installer URL that doesn't redirect (mirror_windows_setups).
+LaunchHeim moved to CodeIsNotEvil/LaunchHeim on 2026-11-06 and its site mirrors its new releases; this
+one keeps mirroring the releases made here, so Store submissions that point here keep working.
 
 The workflow .github/workflows/site.yml runs this on every change to the site or a changelog and
 whenever a release is published, so the download links follow new releases without editing the pages.
@@ -44,33 +46,18 @@ import changelog  # noqa: E402 - lives in Scripts/, shared with the release work
 
 CHANGELOGS = {
   "gt": ROOT / "Applications/GroceryTracker/CHANGELOG.md",
-  "lh": ROOT / "Applications/LaunchHeim/CHANGELOG.md",
 }
 
 # Files the site shows, taken from their real homes.
 ASSETS = {
   "img/c-logo.svg": ROOT / "Assets/c-logo/C-logo.svg",
   "img/grocerytracker.svg": ROOT / "Applications/GroceryTracker/assets/GT-logo-optimized.svg",
-  "img/launchheim.svg": ROOT / "Applications/LaunchHeim/src/Desktop/packaging/launchheim.svg",
   "fonts/KodeMono.woff2": ROOT / "Applications/GroceryTracker/src/UI/GroceryTracker.UI.Blazor/wwwroot/fonts/KodeMono.woff2",
   "fonts/OFL.txt": ROOT / "Applications/GroceryTracker/src/UI/GroceryTracker.UI.Blazor/wwwroot/fonts/OFL.txt",
-  # The Microsoft Store listing's screenshots, downsized for the web (site/README.md).
-  **{f"img/launchheim/{path.name}": path for path in sorted((ROOT / "Applications/LaunchHeim/assets/screenshots").glob("*.webp"))},
 }
 
-# LaunchHeim's Microsoft Store listing. Without ?hl=&gl= the Store picks the visitor's language and country.
-LAUNCHHEIM_STORE_URL = "https://apps.microsoft.com/detail/xpfpghrfcl4sfl"
-
-# Which release file is which download, by how its name ends.
-LAUNCHHEIM_FILES = {
-  "windows_setup": "-win-x64-setup.exe",
-  "windows": "-win-x64.zip",
-  "arch": ".pkg.tar.zst",
-  "deb": "_amd64.deb",
-  "rpm": ".x86_64.rpm",
-  # LaunchHeim Companion, the Android app, released under the same tag.
-  "android": ".apk",
-}
+# The name ending of a LaunchHeim Windows setup, for mirror_windows_setups.
+LAUNCHHEIM_WINDOWS_SETUP = "-win-x64-setup.exe"
 GROCERYTRACKER_FILES = {
   "compose": "compose.yaml",
   "env": "env.example",
@@ -117,7 +104,7 @@ def mirror_windows_setups(releases: list[dict], output: Path) -> list[str]:
   published = []
   launchheim = [r for r in releases if r["tag_name"].startswith("launchheim-v") and not r["draft"] and not r["prerelease"]]
   for release in launchheim[:MIRRORED_SETUPS]:
-    asset = next((a for a in release["assets"] if a["name"].endswith(LAUNCHHEIM_FILES["windows_setup"])), None)
+    asset = next((a for a in release["assets"] if a["name"].endswith(LAUNCHHEIM_WINDOWS_SETUP)), None)
     if asset is None:
       continue
     version = release["tag_name"].removeprefix("launchheim-v")
@@ -249,10 +236,8 @@ def main() -> None:
   releases = json.loads(args.releases_json.read_text()) if args.releases_json else fetch_releases(args.require_releases_api)
   values = {
     "repo_url": f"https://github.com/{REPO}",
-    "lh_store_url": LAUNCHHEIM_STORE_URL,
     "year": str(datetime.now().year),
     **release_values(newest(releases, "grocerytracker-v"), "gt", "grocerytracker-v", GROCERYTRACKER_FILES),
-    **release_values(newest(releases, "launchheim-v"), "lh", "launchheim-v", LAUNCHHEIM_FILES),
   }
   for key, path in CHANGELOGS.items():
     values[f"{key}_changes"] = changelog_html(path, values.get(f"{key}_version"))
