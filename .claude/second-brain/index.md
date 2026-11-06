@@ -1,7 +1,7 @@
 ---
 tags: [moc]
 created: 2026-09-25
-updated: 2026-10-14
+updated: 2026-11-06
 status: active
 ---
 # Index
@@ -11,7 +11,7 @@ The map of content. Keep it short: link to hub notes, not to every note.
 ## Projects
 - [[grocerytracker]]: offline-first grocery spend tracker (.NET 10, Blazor WASM PWA, PostgreSQL)
 - [[app-site]]: GitHub Pages site promoting the apps, with downloads and install guides
-- [[launchheim]]: Valheim mod launcher with per-instance BepInEx (.NET 10, Qml.Net / Qt Quick)
+- [[launchheim]]: Valheim mod launcher; moved to CodeIsNotEvil/LaunchHeim on 2026-11-06, notes continue there
 
 ## Areas
 - [[raspberry-pi-homelab]]: the Debian 13 Pi that hosts GroceryTracker
@@ -41,6 +41,10 @@ The map of content. Keep it short: link to hub notes, not to every note.
 - [[0015-launchheim-steam-launch-options-wrap-steams-command]]: `launchheim steam %command%` in Valheim's launch options starts the last play from Steam
 - [[0016-launchheim-instant-start-plugin]]: "Start instantly" is a BepInEx plugin pressing Start in Valheim's menus, opt-in per server or world
 - [[0017-launchheim-keeps-achievements-with-the-games-own-switch]]: "Keep Steam achievements with mods" sets the dev command's character key, and only undoes its own
+- [[0018-launchheim-own-repository]]: LaunchHeim, its history and its site moved to CodeIsNotEvil/LaunchHeim
+
+Decisions 0005 to 0017 (LaunchHeim's) were copied to CodeIsNotEvil/LaunchHeim with the same numbers;
+new LaunchHeim decisions are only recorded there.
 
 ## Archive
 - [[shoppingmanager]]: the predecessor to GroceryTracker

@@ -1,4 +1,0 @@
-# The wrapper scripts must keep their line ends on every checkout (Windows runners use autocrlf).
-gradlew text eol=lf
-gradlew.bat text eol=crlf
-*.jar binary

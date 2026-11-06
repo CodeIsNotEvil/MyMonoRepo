@@ -1,10 +1,13 @@
 ---
 tags: [project, dotnet, qml, gaming]
 created: 2026-09-26
-updated: 2026-10-14
-status: active
+updated: 2026-11-06
+status: done
 ---
 # LaunchHeim
+
+> **Moved 2026-11-06.** LaunchHeim, this note and its decisions now live in CodeIsNotEvil/LaunchHeim
+> ([[0018-launchheim-own-repository]]). This copy is no longer updated; correct things there.
 
 A Valheim mod launcher for the owner's CachyOS / Plasma 6 desktop, also packaged for Debian/Ubuntu
 and Fedora/RHEL and ported to Windows. Code: `Applications/LaunchHeim/`. Behaviour, build and the Qt

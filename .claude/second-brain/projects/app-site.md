@@ -1,7 +1,7 @@
 ---
 tags: [project, site, github-pages]
 created: 2026-09-27
-updated: 2026-10-11
+updated: 2026-11-06
 status: active
 ---
 # App site
@@ -9,6 +9,10 @@ status: active
 The public page for the owner's apps: https://codeisnotevil.github.io/MyMonoRepo/ (promotion,
 downloads, install guides, Ko-fi at https://ko-fi.com/codeisnotevil). Code: `site/`, how it works:
 `site/README.md`. Why it's built this way: [[0007-per-app-releases-and-prebuilt-images]].
+
+Since 2026-11-06 LaunchHeim has its own site, https://codeisnotevil.github.io/LaunchHeim/, built in its
+own repository ([[0018-launchheim-own-repository]]). This one keeps a pointer card and section, forwards
+`privacy.html`, and keeps mirroring the Windows setups of the LaunchHeim releases made here.
 
 ## Gotchas
 - Releases created by a workflow's GITHUB_TOKEN don't fire `release: published` elsewhere, so the

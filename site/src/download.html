@@ -112,228 +112,20 @@ nano .env        # set POSTGRES_PASSWORD</code></pre></li>
     </section>
 
     <!-- ================= LaunchHeim ================= -->
+    <!-- LaunchHeim moved to its own repository and site on 2026-11-06 (CodeIsNotEvil/LaunchHeim). The
+         section stays so the old address, download.html#launchheim, still leads somewhere: copies up
+         to 0.7.1 open it from their update reminder, and older release notes link it. -->
     <section class="app-section card" id="launchheim" aria-labelledby="lh-title">
       <header>
         <span class="glint glint-lh"><img src="img/launchheim.svg" alt="" width="48" height="48"></span>
         <div>
           <h2 id="lh-title">LaunchHeim</h2>
-          <!-- if:lh_release -->
-          <p class="version">Version {{ lh_version }} · released {{ lh_date }} · <a href="#launchheim-changes">what's new</a> · <a href="{{ lh_release_url }}">release notes</a> · MIT license</p>
-          <!-- else -->
-          <p class="version">No release yet · MIT license</p>
-          <!-- end -->
+          <p class="version">A Valheim mod launcher · MIT license</p>
         </div>
       </header>
 
-      <p>A Valheim mod launcher. Each instance is its own modpack with its own BepInEx, mods and
-        configs, and the game install stays vanilla. You need Valheim on Steam.</p>
-      <!-- Shown only while no app is picked (site.css, "One app at a time"). -->
-      <a class="button primary app-open" href="#launchheim">Download and install</a>
-      <div class="app-more">
-
-      <!-- if:lh_release -->
-      <!-- One way to get it at a time: the tabs are radio buttons, so picking one shows its download and
-           its instructions and hides the others, with no JavaScript (the site has none). The radios come
-           before the tabs and panels because CSS can only select later siblings (site.css, "Download
-           picker"); arrow keys move between them like any radio group. The Store is first and picked by
-           default: it is the one way that needs no instructions. -->
-      <div class="get" role="group" aria-label="How to get LaunchHeim">
-        <input type="radio" name="lh-get" id="lh-get-store" checked>
-        <!-- if:lh_windows_setup_url -->
-        <input type="radio" name="lh-get" id="lh-get-setup">
-        <!-- end -->
-        <!-- if:lh_arch_url -->
-        <input type="radio" name="lh-get" id="lh-get-arch">
-        <!-- end -->
-        <!-- if:lh_deb_url -->
-        <input type="radio" name="lh-get" id="lh-get-deb">
-        <!-- end -->
-        <!-- if:lh_rpm_url -->
-        <input type="radio" name="lh-get" id="lh-get-rpm">
-        <!-- end -->
-        <!-- if:lh_android_url -->
-        <input type="radio" name="lh-get" id="lh-get-android">
-        <!-- end -->
-
-        <div class="get-tabs">
-          <label for="lh-get-store">Microsoft Store <small>Windows 10/11</small></label>
-          <!-- if:lh_windows_setup_url -->
-          <label for="lh-get-setup">Windows setup <small>.exe · {{ lh_windows_setup_size }}</small></label>
-          <!-- end -->
-          <!-- if:lh_arch_url -->
-          <label for="lh-get-arch">Arch, CachyOS <small>pacman · {{ lh_arch_size }}</small></label>
-          <!-- end -->
-          <!-- if:lh_deb_url -->
-          <label for="lh-get-deb">Debian, Ubuntu <small>.deb · {{ lh_deb_size }}</small></label>
-          <!-- end -->
-          <!-- if:lh_rpm_url -->
-          <label for="lh-get-rpm">Fedora, RHEL <small>.rpm · {{ lh_rpm_size }}</small></label>
-          <!-- end -->
-          <!-- if:lh_android_url -->
-          <label for="lh-get-android">Android companion <small>.apk · {{ lh_android_size }}</small></label>
-          <!-- end -->
-        </div>
-
-        <div class="get-panel get-store">
-          <a class="button primary" href="{{ lh_store_url }}">Get it from the Microsoft Store</a>
-          <p>For Windows 10 and 11. The Store installs the same setup you can download here, so it
-            updates the same way: when a new version is out, LaunchHeim says so in its sidebar, and
-            <em>Update now</em> installs it. Your instances stay in <code>%LOCALAPPDATA%\LaunchHeim</code>.</p>
-          <!-- Each release reaches the Store only once its setup URL is entered in Partner Center and
-               certified (site/README.md), so the listing can be a version behind the files here. -->
-          <p>A new release can take a few days to reach the Store; the Windows setup tab always has
-            the newest one.</p>
-        </div>
-
-        <!-- if:lh_windows_setup_url -->
-        <div class="get-panel get-setup">
-          <a class="button primary" href="{{ lh_windows_setup_url }}">Download the setup <small>{{ lh_windows_setup_size }}</small></a>
-          <p>Run it. It installs LaunchHeim for you only (no administrator needed) or for all users.
-            Windows doesn't know our certificate, so "Windows protected your PC" needs
-            <em>More info → Run anyway</em>.</p>
-          <p>When a new version is out, LaunchHeim says so in its sidebar: <em>Update now</em> installs it
-            and starts again. Your instances stay in <code>%LOCALAPPDATA%\LaunchHeim</code>, also when you
-            uninstall it (Windows Settings → Apps).</p>
-          <!-- if:lh_windows_url -->
-          <p>Rather not install anything? The <a href="{{ lh_windows_url }}">portable zip</a>
-            ({{ lh_windows_size }}) has the same files: unzip it anywhere and start
-            <code>LaunchHeim.exe</code>. To update it, replace the folder.</p>
-          <!-- end -->
-          <details>
-            <summary>Check the download</summary>
-            <!-- if:lh_windows_setup_sha256 -->
-            <p>In PowerShell, in the folder you saved it to. This prints <code>True</code> when the file is
-              intact:</p>
-<pre><code>(Get-FileHash .\{{ lh_windows_setup_file }}).Hash -eq "{{ lh_windows_setup_sha256 }}"</code></pre>
-            <!-- end -->
-            <!-- The thumbprint of packaging/windows/launchheim-codesign.cer; change it with the certificate. -->
-            <p>The setup and LaunchHeim's own files are signed by <code>CodeIsNotEvil</code> with a self-signed
-              certificate. That doesn't make Windows trust it, but it shows the files are ours and unchanged.
-              This prints <code>True</code>:</p>
-<pre><code>(Get-AuthenticodeSignature .\{{ lh_windows_setup_file }}).SignerCertificate.Thumbprint -eq "284F5384B189984492629622EDC4A40646C5D8F6"</code></pre>
-          </details>
-        </div>
-        <!-- end -->
-
-        <!-- if:lh_arch_url -->
-        <div class="get-panel get-arch">
-          <!-- pacman -U <url> wants a .sig next to a downloaded package (RemoteFileSigLevel defaults to
-               Required) and fails with a 404 because the release has none. A local file only needs
-               LocalFileSigLevel, which is Optional, so download first and check the hash instead. -->
-<pre><code>curl -LO {{ lh_arch_url }}
-<!-- if:lh_arch_sha256 -->echo "{{ lh_arch_sha256 }}  {{ lh_arch_file }}" | sha256sum -c
-<!-- end -->sudo pacman -U ./{{ lh_arch_file }}</code></pre>
-          <p>The package isn't signed, so pacman won't install it straight from the link; download it
-            first. <code>sha256sum -c</code> prints <code>OK</code> when the file matches the release.
-            Qt 5 and .NET come from the official repositories.</p>
-          <p>To update, run the same commands for the new version. <code>pacman -Syu</code> doesn't
-            see new releases, because LaunchHeim isn't in a repository. To build it yourself instead,
-            run <code>makepkg -si</code> in <code>Applications/LaunchHeim/packaging/arch</code>.</p>
-        </div>
-        <!-- end -->
-
-        <!-- if:lh_deb_url -->
-        <div class="get-panel get-deb">
-          <p>For Debian 13, Ubuntu 24.04 and newer:</p>
-<pre><code>curl -LO {{ lh_deb_url }}
-<!-- if:lh_deb_sha256 -->echo "{{ lh_deb_sha256 }}  {{ lh_deb_file }}" | sha256sum -c
-<!-- end -->sudo apt install ./{{ lh_deb_file }}</code></pre>
-          <p>To update, run the same commands for the new version.</p>
-        </div>
-        <!-- end -->
-
-        <!-- if:lh_rpm_url -->
-        <div class="get-panel get-rpm">
-          <p>For Fedora, RHEL 9 and 10:</p>
-<pre><code>curl -LO {{ lh_rpm_url }}
-<!-- if:lh_rpm_sha256 -->echo "{{ lh_rpm_sha256 }}  {{ lh_rpm_file }}" | sha256sum -c
-<!-- end -->sudo dnf install ./{{ lh_rpm_file }}</code></pre>
-          <p>On RHEL 10 and its rebuilds, enable EPEL first (<code>sudo dnf install epel-release</code>),
-            which still has Qt 5. To update, run the same commands for the new version.</p>
-        </div>
-        <!-- end -->
-
-        <!-- if:lh_android_url -->
-        <div class="get-panel get-android">
-          <a class="button primary" href="{{ lh_android_url }}">Download the APK <small>{{ lh_android_size }}</small></a>
-          <p>LaunchHeim Companion keeps your instances' mod lists on the phone: browse Thunderstore, Nexus
-            Mods and CurseForge on the way and add mods, see who's online on your servers, and send the
-            lists back to LaunchHeim at home. It needs Android 8 or newer and isn't in the Play Store.</p>
-          <ol class="steps">
-            <li>Open this page on the phone, tap the download, and open the file when it's done.</li>
-            <li>Android asks to allow installing apps from your browser (or file manager) the first time.
-              Allow it, go back, and install.</li>
-            <li>On the PC, turn on <strong>Settings → Phone sync</strong>, then press the phone button on an
-              instance's page. Keep both on the same Wi-Fi. If the phone can't find the PC, Settings → Phone
-              sync shows how to let it through the firewall.</li>
-          </ol>
-          <p>To update, install the new APK over the old one; your lists are kept.</p>
-          <details>
-            <summary>Updates with Obtainium</summary>
-            <ol class="steps">
-              <li>In <a href="https://obtainium.imranr.dev/">Obtainium</a>, tap <strong>Add App</strong> and
-                enter <code>{{ repo_url }}</code> as the source URL.</li>
-              <li>Set <strong>Filter release titles by regular expression</strong> to <code>^LaunchHeim</code>.
-                The repository also releases GroceryTracker, which has no APK.</li>
-              <li>Tap <strong>Add</strong>. Obtainium recognises the installed companion and installs new
-                versions when they come out.</li>
-            </ol>
-          </details>
-          <!-- if:lh_android_sha256 -->
-          <details>
-            <summary>Check the file on a PC first</summary>
-<pre><code>curl -LO {{ lh_android_url }}
-echo "{{ lh_android_sha256 }}  {{ lh_android_file }}" | sha256sum -c</code></pre>
-          </details>
-          <!-- end -->
-        </div>
-        <!-- end -->
-      </div>
-      <!-- LGPL-3.0: the Windows builds ship Qt, so where to get its source has to sit next to the download. -->
-      <p class="fine-print">LaunchHeim is MIT licensed and built on open-source software, including Qt 5.15
-        under the GNU LGPL v3. Every download contains <code>THIRD-PARTY-NOTICES.txt</code> and the
-        license texts (<a href="{{ repo_url }}/blob/main/Applications/LaunchHeim/THIRD-PARTY-NOTICES.txt">read them online</a>).
-        The Qt in the Windows builds (the Store's, the setup and the zip) is the unmodified Qt 5.15.2; its source is at
-        <a href="https://download.qt.io/archive/qt/5.15/5.15.2/single/">download.qt.io</a>.</p>
-      <!-- else -->
-      <div class="note">
-        <p>The first release is on its way. Until then, the
-          <a href="{{ repo_url }}/blob/main/Applications/LaunchHeim/packaging/README.md">packaging guide</a>
-          shows how to build it for Arch (<code>makepkg -si</code>), Debian, Fedora and Windows.</p>
-      </div>
-      <!-- end -->
-
-      <h3 id="launchheim-changes">What's new</h3>
-      <!-- Built from Applications/LaunchHeim/CHANGELOG.md by build.py. -->
-      <div class="changelog">
-{{{ lh_changes }}}
-      </div>
-
-      <details>
-        <summary>Nexus Mods and CurseForge</summary>
-        <p>Thunderstore works right away. For <strong>Nexus Mods</strong>, copy the API key Nexus lists for
-          Vortex on your API keys page into Settings and press <strong>Register</strong>, so the website's
-          "Mod Manager Download" buttons open LaunchHeim. Premium accounts can install straight from
-          LaunchHeim. <strong>CurseForge</strong> doesn't let other apps download Valheim mods: download
-          them on <a href="https://www.curseforge.com/valheim/search?page=1&amp;pageSize=20&amp;sortBy=relevancy">CurseForge</a>
-          and drop the file onto an instance.</p>
-      </details>
-      <details>
-        <summary>What happens to my game folder?</summary>
-        <p>On Linux, nothing: each instance's BepInEx is loaded from the instance folder. On Windows,
-          BepInEx's loader (<code>winhttp.dll</code>) has to sit next to the game, so LaunchHeim puts it
-          there, switched off. Starting Valheim from Steam stays vanilla. Delete that file and
-          <code>doorstop_config.ini</code> to remove it.</p>
-      </details>
-      <details>
-        <summary>Why does Steam start the game on Windows?</summary>
-        <p>On Windows, LaunchHeim asks Steam to start Valheim with the instance's settings, because Steam
-          only adds its overlay (Shift+Tab, F12 screenshots) to games it starts itself. So the launch
-          options in Valheim's Steam properties apply too. On Linux, LaunchHeim starts the game itself
-          and loads the overlay the same way Steam does.</p>
-      </details>
-      <p>More in the <a href="{{ repo_url }}/tree/main/Applications/LaunchHeim#readme">LaunchHeim README</a>.</p>
-      </div>
+      <p>LaunchHeim has its own site now, with the downloads, the install guides and what's new.</p>
+      <a class="button primary" href="https://codeisnotevil.github.io/LaunchHeim/download.html">Download LaunchHeim</a>
     </section>
 
     <section class="card support" aria-labelledby="support-title">
@@ -349,7 +141,7 @@ echo "{{ lh_android_sha256 }}  {{ lh_android_file }}" | sha256sum -c</code></pre
   <footer class="site-footer">
     <div class="wrap">
       <p>© {{ year }} CodeIsNotEvil</p>
-      <p><a href="{{ repo_url }}">Source on GitHub</a> · <a href="privacy.html">LaunchHeim privacy policy</a></p>
+      <p><a href="{{ repo_url }}">Source on GitHub</a> · <a href="https://codeisnotevil.github.io/LaunchHeim/privacy.html">LaunchHeim privacy policy</a></p>
       <p>Set in <a href="fonts/OFL.txt">Kode Mono</a> (SIL Open Font License)</p>
     </div>
   </footer>

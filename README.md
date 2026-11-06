@@ -16,7 +16,7 @@ a GitHub account or any GitHub knowledge to use it.
 | App | What it is | Get it |
 |---|---|---|
 | [GroceryTracker](Applications/GroceryTracker) | Tracks household grocery spending and who owes whom. An offline-first web app (Blazor WebAssembly PWA, ASP.NET Core, PostgreSQL) that runs on your own server, even a Raspberry Pi. | [Download and guide](https://codeisnotevil.github.io/MyMonoRepo/download.html#grocerytracker) |
-| [LaunchHeim](Applications/LaunchHeim) | A Valheim mod launcher. Every modpack lives in its own instance with its own BepInEx, and the game install stays vanilla. .NET with a Qt Quick UI, for Linux and Windows. | [Download and guide](https://codeisnotevil.github.io/MyMonoRepo/download.html#launchheim) |
+| [LaunchHeim](https://github.com/CodeIsNotEvil/LaunchHeim) | A Valheim mod launcher. Every modpack lives in its own instance with its own BepInEx, and the game install stays vanilla. .NET with a Qt Quick UI, for Linux and Windows. It has its own repository since 2026-11-06; its history up to 0.7.1 is still here. | [Download and guide](https://codeisnotevil.github.io/LaunchHeim/download.html) |
 
 Each app's README explains how it is built and why it works the way it does.
 
@@ -40,12 +40,10 @@ It's a personal repo, so it follows my habits, not a team's:
 - **`main` is where work lands.** It's protected, so its history is never rewritten or force-pushed,
   but it moves with whatever I'm learning at the moment. Don't build on a random commit; use the
   releases.
-- **Releases are per app.** A tag like `launchheim-v0.2.0` or `grocerytracker-v0.2.0` builds and
+- **Releases are per app.** A tag like `grocerytracker-v0.2.0` builds and
   publishes that app, and each app keeps a `CHANGELOG.md`. Only tagged releases are meant for use.
 
 ## License
 
-GroceryTracker and LaunchHeim are MIT-licensed; see the `LICENSE` in each app's folder. LaunchHeim
-also ships third-party software under its own licenses, listed in its
-[`THIRD-PARTY-NOTICES.txt`](Applications/LaunchHeim/THIRD-PARTY-NOTICES.txt). Everything else here is
+GroceryTracker is MIT-licensed; see the `LICENSE` in its folder. Everything else here is
 my personal setup, shared as it is.

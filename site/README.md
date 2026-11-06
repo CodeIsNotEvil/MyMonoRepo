@@ -1,8 +1,7 @@
 # Site
 
 The GitHub Pages site at https://codeisnotevil.github.io/MyMonoRepo/: a page promoting the apps
-(`src/index.html`), a download page with install guides (`src/download.html`) and LaunchHeim's privacy
-policy (`src/privacy.html`, which the Microsoft Store listing links to; keep it true to the code), in the apps' own
+(`src/index.html`) and a download page with install guides (`src/download.html`), in the apps' own
 look (Kode Mono, `#DE5833`, light and dark with the system). Plain HTML and CSS, no JavaScript and
 nothing loaded from other sites.
 
@@ -23,30 +22,24 @@ site/build.py --releases-json sample.json       # preview the download page with
 the GitHub API for each app's newest release, including the SHA-256 GitHub stores for every file
 (`digest`). Download links and checksums therefore follow releases without editing the pages. Before an app's first release, its section shows build instructions instead.
 
-The download page shows one app at a time, picked by the address (`download.html#launchheim`, or an
-anchor inside the section such as `#launchheim-changes`) through CSS `:target` and `:has()`. With no
-anchor, both apps show only their header and a button that picks them. Link to an app's anchor, not to
-the bare page, when the reader wants its downloads. Browsers without `:has()` show both in full.
+The download page shows one app at a time, picked by the address (`download.html#grocerytracker`, or
+an anchor inside the section such as `#grocerytracker-changes`) through CSS `:target` and `:has()`.
+With no anchor, every app shows only its header and a button that picks it. Link to an app's anchor,
+not to the bare page, when the reader wants its downloads. Browsers without `:has()` show all in full.
 
-LaunchHeim's download section is a picker: one tab per way to get it (Microsoft Store, Windows setup,
-Arch, Debian, Fedora, Android), and only the picked one's download and instructions show. The tabs are
-radio buttons styled in CSS, so the site still runs no JavaScript; a new tab needs its lines in the three
-selector lists under "Download picker" in `site.css`. The Store link is `LAUNCHHEIM_STORE_URL` in
-`build.py` (the publisher page is https://apps.microsoft.com/search/publisher?name=CodeIsNotEvil).
-
-The screenshots on the front page are the ones made for the Store listing, kept in
-`Applications/LaunchHeim/assets/screenshots/` as 1600 px WebP (about 400 KB for all five rather than
-2.6 MB of PNG). For new ones:
-
-```fish
-magick 01-library.png -resize '1600x>' -strip -define webp:method=6 -quality 85 01-library.webp
-```
+LaunchHeim moved to its own repository and site on 2026-11-06
+(https://codeisnotevil.github.io/LaunchHeim/, with its downloads, screenshots and privacy policy). Its
+card on the front page and its section on the download page only point there now. The section and
+`privacy.html` (a forward) stay because old addresses lead to them: installed copies up to 0.7.1 open
+`download.html#launchheim`, and the Microsoft Store listing linked the privacy policy here. Its logo is
+a copy in `src/img/`.
 
 The build fails when a rendered page links to an `#anchor` it doesn't have, or opens more `<section>`s
 than it closes. Balanced `if`/`end` markers alone didn't catch a template that lost a stretch in the
 middle (2026-10-01), and the download page went live mixing the two apps.
 
-Deployments also carry LaunchHeim's Windows setups of the three newest releases, at
+Deployments also carry the Windows setups of the three newest LaunchHeim releases made here (up to
+0.7.1; newer ones are mirrored by LaunchHeim's own site), at
 `downloads/launchheim/<version>/LaunchHeim-<version>-win-x64-setup.exe` (`--mirror-installers`, checked
 against GitHub's SHA-256). The Microsoft Store takes the installer by URL and refuses one that redirects,
 which GitHub's release links always do. After a release, enter the new version's URL in Partner
