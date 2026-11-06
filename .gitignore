@@ -10,3 +10,7 @@ obj/
 .vscode
 # Python bytecode, e.g. from site/build.py importing Scripts/changelog.py
 __pycache__/
+
+# LaunchHeim moved to CodeIsNotEvil/LaunchHeim (2026-11-06). Old checkouts keep ignored files here,
+# among them the Android release key; never commit them.
+/Applications/LaunchHeim/

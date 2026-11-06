@@ -1,4 +1,0 @@
-# The Windows build applies the patch with git apply, which needs the LF endings it was made with,
-# and a Windows checkout (core.autocrlf=true) would convert it. Shell scripts need LF to run at all.
-*.patch text eol=lf
-*.sh text eol=lf
